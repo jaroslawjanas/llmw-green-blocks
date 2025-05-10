@@ -380,7 +380,7 @@ def main():
     parser.add_argument("--prompt", type=str, help="Custom prompt (uses random essay if not provided)")
     parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
-    parser.add_argument("--output", type=str, help="Output file to save generated text (optional)")
+    parser.add_argument("--output", type=str, help="Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)")
     
     args = parser.parse_args()
     

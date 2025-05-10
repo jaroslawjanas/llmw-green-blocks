@@ -243,27 +243,14 @@ def list_downloaded_models(cache_dir: str = MODELS_CACHE_DIR) -> List[str]:
     
     return models
 
-def save_model_config(model_name: str, config_file: str = "model_config.json"):
-    """
-    Save selected model configuration to a file.
-    
-    Args:
-        model_name: Selected model name
-        config_file: File to save configuration to
-    """
-    config = {"model": model_name}
-    
-    with open(config_file, "w") as f:
-        json.dump(config, f, indent=2)
-    
-    print(f"Model configuration saved to {config_file}")
+# Configuration functionality removed as requested
 
 def main():
     parser = argparse.ArgumentParser(description="LLM Model Selector")
     parser.add_argument("--list", action="store_true", help="List all recommended models")
     parser.add_argument("--filter", type=str, help="Filter models by tag (e.g., small, medium, large)")
     parser.add_argument("--download", type=str, help="Download a specific model")
-    parser.add_argument("--set-default", type=str, help="Set default model")
+    # Removed set-default argument as requested
     parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
     
     args = parser.parse_args()
@@ -297,8 +284,7 @@ def main():
     elif args.download:
         download_model(args.download, args.cache_dir)
     
-    elif args.set_default:
-        save_model_config(args.set_default)
+    # set_default functionality removed
     
     else:
         # Interactive mode
@@ -317,10 +303,9 @@ def main():
         print("\nOptions:")
         print("1. List all compatible models")
         print("2. Download a model")
-        print("3. Set default model")
-        print("4. Exit")
+        print("3. Exit")
         
-        choice = input("\nEnter your choice (1-4): ")
+        choice = input("\nEnter your choice (1-3): ")
         
         if choice == "1":
             print("\nCompatible models:")
@@ -343,16 +328,8 @@ def main():
                 print("Invalid model number.")
                 
         elif choice == "3":
-            print("\nSelect a default model:")
-            all_models = list(set([m["name"] for m in compatible_models] + downloaded))
-            for i, model in enumerate(all_models, 1):
-                print(f"{i}. {model}")
-                
-            model_idx = int(input("\nEnter model number: ")) - 1
-            if 0 <= model_idx < len(all_models):
-                save_model_config(all_models[model_idx])
-            else:
-                print("Invalid model number.")
+            # Exit the program
+            print("Exiting model selector.")
 
 if __name__ == "__main__":
     main()

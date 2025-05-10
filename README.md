@@ -13,7 +13,7 @@ The watermarking technique works as follows:
 5. Select the token with highest probability (greedy sampling)
 6. Track how many green vs. red tokens are selected during generation
 
-This technique increases the likelihood of selecting tokens from the green list, creating a statistical pattern that can be analyzed. By tracking red tokens (those not given the additional bias), we can analyze how strong the watermarking effect is and potentially understand resistance patterns to the watermark.
+This technique increases the likelihood of selecting tokens from the green list, creating a statistical pattern that can be analyzed.
 
 ## Installation
 
@@ -60,7 +60,6 @@ This interactive tool will:
 - Check your available VRAM
 - Recommend compatible models
 - Allow you to download models
-- Set a default model for the watermarker
 
 Alternatively, use command-line options:
 
@@ -73,9 +72,6 @@ python model_selector.py --list --filter medium
 
 # Download a specific model
 python model_selector.py --download facebook/opt-1.3b
-
-# Set default model
-python model_selector.py --set-default facebook/opt-1.3b
 ```
 
 ### Running the Watermarker
@@ -102,14 +98,17 @@ All options:
 
 ```
 --model MODEL           Model to use
---max-tokens MAX_TOKENS Maximum tokens to generate
+--max-tokens MAX_TOKENS Maximum tokens to generate (default: 100)
 --green-fraction GREEN_FRACTION Fraction of tokens in green list (default: 0.5)
 --bias BIAS             Bias to add to green tokens (default: 6.0)
---seed SEED             Random seed (default: 2025)
+--seed SEED             Random seed (default: 4242)
 --prompt PROMPT         Custom prompt (uses random essay if not provided)
---cache-dir CACHE_DIR   Cache directory for models
+--cache-dir CACHE_DIR   Cache directory for models (optional)
 --no-cuda               Disable CUDA even if available
+--output OUTPUT         Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)
 ```
+
+Note: All watermarking results are automatically saved to the `output/` directory. If you don't specify a filename with `--output`, a filename will be automatically generated based on the model name and a random identifier.
 
 ## Examples
 
@@ -172,9 +171,8 @@ The watermarking algorithm:
 2. The vocabulary is randomly partitioned into two sets: green (50% by default) and red (50%)
 3. A bias value (default: 6.0) is added to the logits of all green tokens
 4. This increases the probability of selecting green tokens and decreases the likelihood of red token selection
-5. By tracking the red tokens that are still selected despite the bias, we can analyze how the watermarking effect varies across different models, prompts, and parameters
 
-The statistical deviation from random chance (50% green, 50% red tokens expected without watermarking) allows us to quantify the strength of the watermarking technique.
+The statistical deviation from random chance (50% green, 50% red tokens expected without watermarking) quantifies the strength of the watermarking technique.
 
 ## References
 
