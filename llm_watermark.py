@@ -366,9 +366,6 @@ def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str
         f.write(f"Red tokens: {stats['red_tokens']}\n")
         f.write(f"Total tokens: {stats['total_tokens']}\n")
         f.write(f"Green ratio: {stats['green_ratio']:.4f}\n")
-        expected = stats.get("expected_ratio", 0.5)
-        f.write(f"Expected ratio without watermarking: {expected:.4f}\n")
-        f.write(f"Deviation from expected: {stats['green_ratio'] - expected:.4f}\n")
 
 def main():
     parser = argparse.ArgumentParser(description="LLM Watermarking Implementation")
@@ -425,15 +422,10 @@ def main():
     print(f"Green ratio: {stats['green_ratio']:.4f}")
     print("---------------------------")
     
-    # Expected ratio would be close to green_list_fraction without watermarking
-    expected = args.green_fraction
-    print(f"Expected ratio without watermarking: {expected:.4f}")
-    print(f"Deviation from expected: {stats['green_ratio'] - expected:.4f}")
-    
     # Save output to file if requested
     if args.output:
         output_path = os.path.join(OUTPUT_DIR, args.output)
-        stats["expected_ratio"] = expected
+        # Stats for file output (expected_ratio reference removed)
         save_to_file(prompt, generated_text, stats, output_path)
         print(f"\nOutput saved to: {output_path}")
     else:
@@ -442,7 +434,7 @@ def main():
         model_name = args.model.split("/")[-1]
         output_file = f"{model_name}_gen_{timestamp}.txt"
         output_path = os.path.join(OUTPUT_DIR, output_file)
-        stats["expected_ratio"] = expected
+        # Stats for file output (no expected_ratio needed)
         save_to_file(prompt, generated_text, stats, output_path)
         print(f"\nOutput saved to: {output_path}")
     

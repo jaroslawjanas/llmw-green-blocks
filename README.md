@@ -126,8 +126,6 @@ Red tokens: 8
 Total tokens: 50
 Green ratio: 0.8400
 ---------------------------
-Expected ratio without watermarking: 0.5000
-Deviation from expected: 0.3400
 ```
 
 ### Varying the Bias Parameter
@@ -172,7 +170,7 @@ The watermarking algorithm:
 3. A bias value (default: 6.0) is added to the logits of all green tokens
 4. This increases the probability of selecting green tokens and decreases the likelihood of red token selection
 
-The statistical deviation from random chance (50% green, 50% red tokens expected without watermarking) quantifies the strength of the watermarking technique.
+A higher green ratio indicates stronger watermarking effect.
 
 ## References
 
@@ -180,4 +178,4 @@ The statistical deviation from random chance (50% green, 50% red tokens expected
 
 ## Disclaimer
 
-This project was developed with assistance from Claude 3.7 Sonnet via the Cline VSCode extension. All code and documentation were reviewed and approved by a human developer, with proper oversight maintained throughout the development process.
+This project was developed with assistance fro m Claude 3.7 Sonnet via the Cline VSCode extension. All code and documentation were reviewed and approved by a human developer, with proper oversight maintained throughout the development process.
