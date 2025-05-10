@@ -22,13 +22,15 @@ from transformers import (
 )
 from tqdm import tqdm
 
-# Set the default cache directory
+# Set the default cache and output directories
 CACHE_DIR = "./cache"
 MODELS_CACHE_DIR = os.path.join(CACHE_DIR, "models")
 DATASETS_CACHE_DIR = os.path.join(CACHE_DIR, "datasets")
+OUTPUT_DIR = "./output"
 os.makedirs(CACHE_DIR, exist_ok=True)
 os.makedirs(MODELS_CACHE_DIR, exist_ok=True)
 os.makedirs(DATASETS_CACHE_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def load_hf_token():
     """Load HuggingFace token from hf_token file."""
@@ -344,6 +346,30 @@ def get_random_essay(seed=None) -> str:
     return essay_text
 
 
+def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str):
+    """
+    Save the prompt, generated text and stats to a file.
+    
+    Args:
+        prompt: The input prompt
+        generated_text: The generated text
+        stats: Statistics about the watermarking
+        output_file: Path to the output file
+    """
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("=== INPUT PROMPT ===\n")
+        f.write(prompt)
+        f.write("\n\n=== GENERATED TEXT ===\n")
+        f.write(generated_text)
+        f.write("\n\n=== WATERMARK STATISTICS ===\n")
+        f.write(f"Green tokens: {stats['green_tokens']}\n")
+        f.write(f"Red tokens: {stats['red_tokens']}\n")
+        f.write(f"Total tokens: {stats['total_tokens']}\n")
+        f.write(f"Green ratio: {stats['green_ratio']:.4f}\n")
+        expected = stats.get("expected_ratio", 0.5)
+        f.write(f"Expected ratio without watermarking: {expected:.4f}\n")
+        f.write(f"Deviation from expected: {stats['green_ratio'] - expected:.4f}\n")
+
 def main():
     parser = argparse.ArgumentParser(description="LLM Watermarking Implementation")
     parser.add_argument("--model", type=str, default="facebook/opt-125m", help="Model to use")
@@ -354,6 +380,7 @@ def main():
     parser.add_argument("--prompt", type=str, help="Custom prompt (uses random essay if not provided)")
     parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
+    parser.add_argument("--output", type=str, help="Output file to save generated text (optional)")
     
     args = parser.parse_args()
     
@@ -402,6 +429,22 @@ def main():
     expected = args.green_fraction
     print(f"Expected ratio without watermarking: {expected:.4f}")
     print(f"Deviation from expected: {stats['green_ratio'] - expected:.4f}")
+    
+    # Save output to file if requested
+    if args.output:
+        output_path = os.path.join(OUTPUT_DIR, args.output)
+        stats["expected_ratio"] = expected
+        save_to_file(prompt, generated_text, stats, output_path)
+        print(f"\nOutput saved to: {output_path}")
+    else:
+        # Generate a default filename based on timestamp
+        timestamp = str(int(random.random() * 10000))
+        model_name = args.model.split("/")[-1]
+        output_file = f"{model_name}_gen_{timestamp}.txt"
+        output_path = os.path.join(OUTPUT_DIR, output_file)
+        stats["expected_ratio"] = expected
+        save_to_file(prompt, generated_text, stats, output_path)
+        print(f"\nOutput saved to: {output_path}")
     
 
 if __name__ == "__main__":

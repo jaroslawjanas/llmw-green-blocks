@@ -1,6 +1,9 @@
 # Model cache directory
 cache/
 
+# Output directory
+output/
+
 # Python bytecode
 __pycache__/
 *.py[cod]
