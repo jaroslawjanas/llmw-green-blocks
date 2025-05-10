@@ -47,9 +47,10 @@ class LLMWatermarker:
         model_name: str,
         green_list_fraction: float = 0.5,
         bias: float = 6.0,
-        seed: int = 42,
+        seed: int = 4242,
         cache_dir: str = CACHE_DIR,
         device: Optional[str] = None,
+        context_window: int = 1024,
     ):
         """
         Initialize the watermarker with the specified model and parameters.
@@ -61,12 +62,14 @@ class LLMWatermarker:
             seed: Random seed for reproducibility
             cache_dir: Directory to cache models
             device: Device to run model on ('cuda', 'cpu', or None for auto-detection)
+            context_window: Maximum number of tokens to use as context for generation (default: 1024)
         """
         self.model_name = model_name
         self.green_list_fraction = green_list_fraction
         self.bias = bias
         self.seed = seed
         self.cache_dir = cache_dir
+        self.context_window = context_window
         
         # Set device
         if device is None:
@@ -240,10 +243,9 @@ class LLMWatermarker:
         
         # Generate tokens one by one
         for _ in progress_bar:
-            # Only use the last context_length tokens if needed (to save memory and time)
-            context_length = 1024  # Adjust based on model
-            if len(generated_ids) > context_length:
-                input_ids = torch.tensor([generated_ids[-context_length:]], device=self.device)
+            # Only use the last context_window tokens if needed (to save memory and time)
+            if len(generated_ids) > self.context_window:
+                input_ids = torch.tensor([generated_ids[-self.context_window:]], device=self.device)
             else:
                 input_ids = torch.tensor([generated_ids], device=self.device)
             
@@ -378,6 +380,7 @@ def main():
     parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
     parser.add_argument("--output", type=str, help="Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)")
+    parser.add_argument("--context-window", type=int, default=1024, help="Maximum number of tokens to use as context for generation (default: 1024)")
     
     args = parser.parse_args()
     
@@ -391,7 +394,8 @@ def main():
         bias=args.bias,
         seed=args.seed,
         cache_dir=args.cache_dir,
-        device=device
+        device=device,
+        context_window=args.context_window
     )
     
     # Get prompt
