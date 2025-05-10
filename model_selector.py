@@ -24,7 +24,9 @@ def load_hf_token():
 
 # Define the cache directory
 CACHE_DIR = "./cache"
+MODELS_CACHE_DIR = os.path.join(CACHE_DIR, "models")
 os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(MODELS_CACHE_DIR, exist_ok=True)
 
 # Models recommended for 8GB VRAM
 RECOMMENDED_MODELS = [
@@ -176,7 +178,7 @@ def download_model(model_name: str, cache_dir: str = CACHE_DIR):
     
     # Configure tokenizer options
     tokenizer_kwargs = {
-        "cache_dir": cache_dir,
+        "cache_dir": MODELS_CACHE_DIR,
     }
     if token:
         tokenizer_kwargs["token"] = token
@@ -190,7 +192,7 @@ def download_model(model_name: str, cache_dir: str = CACHE_DIR):
     
     # Configure model loading options
     model_kwargs = {
-        "cache_dir": cache_dir,
+        "cache_dir": MODELS_CACHE_DIR,
     }
     if token:
         model_kwargs["token"] = token
@@ -212,14 +214,14 @@ def download_model(model_name: str, cache_dir: str = CACHE_DIR):
             **model_kwargs
         )
     
-    print(f"Model and tokenizer successfully downloaded to {cache_dir}")
+    print(f"Model and tokenizer successfully downloaded to {MODELS_CACHE_DIR}")
 
-def list_downloaded_models(cache_dir: str = CACHE_DIR) -> List[str]:
+def list_downloaded_models(cache_dir: str = MODELS_CACHE_DIR) -> List[str]:
     """
     List models that have already been downloaded.
     
     Args:
-        cache_dir: Cache directory
+        cache_dir: Cache directory for models
         
     Returns:
         List of downloaded model names
@@ -227,15 +229,17 @@ def list_downloaded_models(cache_dir: str = CACHE_DIR) -> List[str]:
     if not os.path.exists(cache_dir):
         return []
     
-    # This is an approximation - a more robust solution would parse the cache structure
+    # Look for model directories with the pattern "models--org--name"
     models = []
-    for org_dir in os.listdir(cache_dir):
-        org_path = os.path.join(cache_dir, org_dir)
-        if os.path.isdir(org_path):
-            for model_dir in os.listdir(org_path):
-                model_path = os.path.join(org_path, model_dir)
-                if os.path.isdir(model_path):
-                    models.append(f"{org_dir}/{model_dir}")
+    for item in os.listdir(cache_dir):
+        item_path = os.path.join(cache_dir, item)
+        if os.path.isdir(item_path) and item.startswith("models--"):
+            # Extract org/model from directory name (e.g., "models--facebook--opt-125m" -> "facebook/opt-125m")
+            parts = item.split("--")
+            if len(parts) >= 3:
+                # Skip the "models" prefix and join the rest with "/"
+                model_name = "/".join(parts[1:])
+                models.append(model_name)
     
     return models
 
@@ -303,7 +307,7 @@ def main():
             print(f"{i}. {model['name']} - {model['description']}")
         
         print("\nAlready downloaded models:")
-        downloaded = list_downloaded_models(args.cache_dir)
+        downloaded = list_downloaded_models(MODELS_CACHE_DIR)
         if downloaded:
             for i, model in enumerate(downloaded, 1):
                 print(f"{i}. {model}")

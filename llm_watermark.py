@@ -24,7 +24,11 @@ from tqdm import tqdm
 
 # Set the default cache directory
 CACHE_DIR = "./cache"
+MODELS_CACHE_DIR = os.path.join(CACHE_DIR, "models")
+DATASETS_CACHE_DIR = os.path.join(CACHE_DIR, "datasets")
 os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(MODELS_CACHE_DIR, exist_ok=True)
+os.makedirs(DATASETS_CACHE_DIR, exist_ok=True)
 
 def load_hf_token():
     """Load HuggingFace token from hf_token file."""
@@ -93,7 +97,7 @@ class LLMWatermarker:
         
         # Configure tokenizer options
         tokenizer_kwargs = {
-            "cache_dir": self.cache_dir,
+            "cache_dir": MODELS_CACHE_DIR,  # Use models subdirectory
         }
         if token:
             # Use token instead of deprecated use_auth_token
@@ -107,7 +111,7 @@ class LLMWatermarker:
         
         # Configure model loading options
         model_kwargs = {
-            "cache_dir": self.cache_dir,
+            "cache_dir": MODELS_CACHE_DIR,  # Use models subdirectory
         }
         if token:
             model_kwargs["token"] = token
@@ -312,7 +316,7 @@ def get_random_essay(seed=None) -> str:
     
     # Configure dataset loading options
     dataset_kwargs = {
-        "cache_dir": CACHE_DIR  # Use local cache directory instead of default ~/.cache/huggingface/datasets/
+        "cache_dir": DATASETS_CACHE_DIR  # Use datasets subdirectory
     }
     if token:
         dataset_kwargs["token"] = token
