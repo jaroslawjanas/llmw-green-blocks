@@ -107,6 +107,109 @@ RECOMMENDED_MODELS = [
         "description": "Mistral 7B, can work with 8GB VRAM using quantization",
         "min_vram": 7,  # 7GB minimum
         "tags": ["very-large"]
+    },
+    # Higher VRAM models (8-24GB)
+    {
+        "name": "mistralai/Mistral-7B-Instruct-v0.2",
+        "description": "Instruction-tuned Mistral 7B, good quality/performance balance",
+        "min_vram": 8,  # 8GB minimum
+        "tags": ["very-large", "instruction-tuned"]
+    },
+    {
+        "name": "google/gemma-7b",
+        "description": "Google Gemma (7B parameters), excellent performance",
+        "min_vram": 9,  # 9GB minimum
+        "tags": ["very-large", "chat-tuned"]
+    },
+    {
+        "name": "google/gemma-7b-it",
+        "description": "Instruction-tuned Google Gemma (7B parameters)",
+        "min_vram": 9,  # 9GB minimum
+        "tags": ["very-large", "instruction-tuned"]
+    },
+    {
+        "name": "meta-llama/Llama-2-7b-hf",
+        "description": "Meta's Llama 2 (7B parameters), strong foundation model",
+        "min_vram": 10,  # 10GB minimum
+        "tags": ["very-large"]
+    },
+    {
+        "name": "meta-llama/Llama-2-7b-chat-hf",
+        "description": "Chat-tuned version of Llama 2 (7B parameters)",
+        "min_vram": 10,  # 10GB minimum
+        "tags": ["very-large", "chat-tuned"]
+    },
+    {
+        "name": "microsoft/phi-3-mini",
+        "description": "Microsoft Phi-3 Mini (3.8B parameters), extremely efficient and high-quality output",
+        "min_vram": 8,  # 8GB minimum
+        "tags": ["large", "instruction-tuned"]
+    },
+    {
+        "name": "NousResearch/Nous-Hermes-2-Mistral-7B",
+        "description": "Mistral 7B tuned with Nous dataset, excellent for instruction following",
+        "min_vram": 10,  # 10GB minimum
+        "tags": ["very-large", "instruction-tuned"]
+    },
+    {
+        "name": "facebook/opt-6.7b",
+        "description": "Large OPT model (6.7B parameters), more capable than smaller variants",
+        "min_vram": 12,  # 12GB minimum
+        "tags": ["very-large"]
+    },
+    {
+        "name": "meta-llama/Llama-2-13b-hf",
+        "description": "Meta's Llama 2 (13B parameters), high-quality generation",
+        "min_vram": 16,  # 16GB minimum
+        "tags": ["very-large"]
+    },
+    {
+        "name": "meta-llama/Llama-2-13b-chat-hf",
+        "description": "Chat-tuned version of Llama 2 (13B parameters)",
+        "min_vram": 16,  # 16GB minimum
+        "tags": ["very-large", "chat-tuned"]
+    },
+    {
+        "name": "mistralai/Mixtral-8x7B-v0.1",
+        "description": "Mixture-of-Experts model combining 8 experts, powerful performance",
+        "min_vram": 20,  # 20GB minimum
+        "tags": ["very-large", "mixture-of-experts"]
+    },
+    {
+        "name": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "description": "Instruction-tuned Mixture-of-Experts model",
+        "min_vram": 20,  # 20GB minimum
+        "tags": ["very-large", "mixture-of-experts", "instruction-tuned"]
+    },
+    {
+        "name": "google/gemma-3-8b-it",
+        "description": "Instruction-tuned Google Gemma 3 (8B parameters), latest generation",
+        "min_vram": 12,  # 12GB minimum
+        "tags": ["very-large", "instruction-tuned"]
+    },
+    {
+        "name": "01-ai/Yi-6B",
+        "description": "Yi model (6B parameters), high-quality multilingual model",
+        "min_vram": 10,  # 10GB minimum
+        "tags": ["very-large", "multilingual"]
+    },
+    {
+        "name": "01-ai/Yi-9B",
+        "description": "Yi model (9B parameters), multilingual and high-quality",
+        "min_vram": 14,  # 14GB minimum
+        "tags": ["very-large", "multilingual"]
+    },
+    {
+        "name": "codellama/CodeLlama-13b-hf",
+        "description": "Code-specialized Llama 13B, excellent for programming tasks",
+        "min_vram": 16,  # 16GB minimum
+        "tags": ["very-large", "code"]
+    },
+    {
+        "name": "bigcode/starcoder2-15b",
+        "description": "StarCoder 2 (15B parameters), trained on code, excellent for programming",
+        "min_vram": 18,  # 18GB minimum
+        "tags": ["very-large", "code"]
     }
 ]
 
