@@ -1,0 +1,185 @@
+# LLM Watermarking Implementation
+
+This project implements the red-green token watermarking technique proposed by [Kirchenbauer et al. (2023)](https://arxiv.org/abs/2301.10226). The implementation focuses on tracking how many red and green tokens are selected during text generation with a special interest in analyzing the red token selection patterns.
+
+## Overview
+
+The watermarking technique works as follows:
+
+1. Generate logits from the model
+2. Randomly split the vocabulary into "green" and "red" token lists based on the hash of the previous token
+3. Add a bias value (typically 6.0) to the logits of green tokens
+4. Apply softmax to convert logits to probabilities
+5. Select the token with highest probability (greedy sampling)
+6. Track how many green vs. red tokens are selected during generation
+
+This technique increases the likelihood of selecting tokens from the green list, creating a statistical pattern that can be analyzed. By tracking red tokens (those not given the additional bias), we can analyze how strong the watermarking effect is and potentially understand resistance patterns to the watermark.
+
+## Installation
+
+### Prerequisites
+
+- Python 3.10 or higher
+- CUDA-compatible GPU with 8GB VRAM (for larger models)
+- Windows 10 (other platforms should work but are untested)
+- Hugging Face account (for accessing models)
+
+### Setup
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/jaroslawjanas/llmw-red-freq.git
+   cd llmw-red-freq
+   ```
+
+2. Create and activate the conda environment:
+   ```bash
+   conda env create -f environment.yml
+   conda activate llm-watermark
+   ```
+
+3. Set up HuggingFace authentication:
+   ```bash
+   # Rename the template file
+   cp hf_token.template hf_token
+   # Then edit the file and replace with your token
+   ```
+   You can get a token from [HuggingFace Settings](https://huggingface.co/settings/tokens)
+
+## Usage
+
+### Selecting a Model
+
+Use the model selector to choose an appropriate model for your hardware:
+
+```bash
+python model_selector.py
+```
+
+This interactive tool will:
+- Check your available VRAM
+- Recommend compatible models
+- Allow you to download models
+- Set a default model for the watermarker
+
+Alternatively, use command-line options:
+
+```bash
+# List all compatible models
+python model_selector.py --list
+
+# Filter by tag (small, medium, large)
+python model_selector.py --list --filter medium
+
+# Download a specific model
+python model_selector.py --download facebook/opt-1.3b
+
+# Set default model
+python model_selector.py --set-default facebook/opt-1.3b
+```
+
+### Running the Watermarker
+
+Basic usage:
+
+```bash
+python llm_watermark.py
+```
+
+This will:
+1. Use the default model (or facebook/opt-125m if none set)
+2. Choose a random essay from the [essays-with-instructions](https://huggingface.co/datasets/ChristophSchuhmann/essays-with-instructions) dataset
+3. Generate 100 tokens with watermarking
+4. Show statistics about green vs. red token selection
+
+Advanced options:
+
+```bash
+python llm_watermark.py --model facebook/opt-1.3b --max-tokens 200 --bias 8.0 --prompt "Your custom prompt here"
+```
+
+All options:
+
+```
+--model MODEL           Model to use
+--max-tokens MAX_TOKENS Maximum tokens to generate
+--green-fraction GREEN_FRACTION Fraction of tokens in green list (default: 0.5)
+--bias BIAS             Bias to add to green tokens (default: 6.0)
+--seed SEED             Random seed (default: 2025)
+--prompt PROMPT         Custom prompt (uses random essay if not provided)
+--cache-dir CACHE_DIR   Cache directory for models
+--no-cuda               Disable CUDA even if available
+```
+
+## Examples
+
+### Basic Watermarking Example
+
+```bash
+python llm_watermark.py --model facebook/opt-125m --max-tokens 50
+```
+
+Sample output:
+```
+--- Watermark Statistics ---
+Green tokens: 42
+Red tokens: 8
+Total tokens: 50
+Green ratio: 0.8400
+---------------------------
+Expected ratio without watermarking: 0.5000
+Deviation from expected: 0.3400
+```
+
+### Varying the Bias Parameter
+
+Lower bias results in more red tokens being selected:
+```bash
+python llm_watermark.py --bias 2.0
+```
+
+Higher bias suppresses red token selection more aggressively:
+```bash
+python llm_watermark.py --bias 10.0
+```
+
+## Model Compatibility
+
+With 8GB VRAM, you can use models up to approximately 7B parameters using float16 precision. Recommended models for different use cases:
+
+| Model Size | Examples | Min VRAM | Notes |
+|------------|----------|----------|-------|
+| Small (<1B) | facebook/opt-125m, facebook/opt-350m | 0-1GB | Fast, works on CPU |
+| Medium (1-2B) | facebook/opt-1.3b, TinyLlama/TinyLlama-1.1B-Chat-v1.0, microsoft/phi-1_5, google/gemma-3-1b-it | 2-3GB | Good balance |
+| Large (2-3B) | facebook/opt-2.7b, microsoft/phi-2, google/gemma-2b | 4-5GB | Better quality |
+| Very Large (7B) | mistralai/Mistral-7B-v0.1 | 7GB+ | Best quality, but at VRAM limit |
+
+### Important Note on Model Licensing
+
+Some models (such as Gemma, Llama, and certain Mistral models) require you to accept a usage license before downloading. When attempting to use these models:
+
+1. You may need to visit the model's page on Hugging Face first (e.g., [google/gemma-2b](https://huggingface.co/google/gemma-2b))
+2. Read and accept the license terms on the Hugging Face website
+3. Ensure you're logged in with the same account whose token you've configured in the `hf_token` file
+
+If you encounter errors like "403 Client Error: Forbidden" when downloading a model, it typically means you need to accept the model's license agreement first.
+
+## How It Works
+
+The watermarking algorithm:
+
+1. For each generated token, the previous token's ID is used to seed a random number generator
+2. The vocabulary is randomly partitioned into two sets: green (50% by default) and red (50%)
+3. A bias value (default: 6.0) is added to the logits of all green tokens
+4. This increases the probability of selecting green tokens and decreases the likelihood of red token selection
+5. By tracking the red tokens that are still selected despite the bias, we can analyze how the watermarking effect varies across different models, prompts, and parameters
+
+The statistical deviation from random chance (50% green, 50% red tokens expected without watermarking) allows us to quantify the strength of the watermarking technique.
+
+## References
+
+- [Kirchenbauer, J., Geiping, J., Wen, Y., Katz, J., Goldstein, T., & Miers, I. (2023). A Watermark for Large Language Models.](https://arxiv.org/abs/2301.10226)
+
+## Disclaimer
+
+This project was developed with assistance from Claude 3.7 Sonnet via the Cline VSCode extension. All code and documentation were reviewed and approved by a human developer, with proper oversight maintained throughout the development process.

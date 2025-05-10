@@ -1,0 +1,12 @@
+# Model cache directory
+cache/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Config file
+model_config.json
+
+# HuggingFace token file
+hf_token
