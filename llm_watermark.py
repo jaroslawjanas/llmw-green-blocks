@@ -311,7 +311,9 @@ def get_random_essay(seed=None) -> str:
     token = load_hf_token()
     
     # Configure dataset loading options
-    dataset_kwargs = {}
+    dataset_kwargs = {
+        "cache_dir": CACHE_DIR  # Use local cache directory instead of default ~/.cache/huggingface/datasets/
+    }
     if token:
         dataset_kwargs["token"] = token
     
