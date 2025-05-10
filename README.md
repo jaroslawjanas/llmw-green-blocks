@@ -101,11 +101,12 @@ All options:
 --max-tokens MAX_TOKENS Maximum tokens to generate (default: 100)
 --green-fraction GREEN_FRACTION Fraction of tokens in green list (default: 0.5)
 --bias BIAS             Bias to add to green tokens (default: 6.0)
---seed SEED             Random seed (default: 4242)
+--seed SEED             Random seed for reproducibility (default: 4242)
 --prompt PROMPT         Custom prompt (uses random essay if not provided)
 --cache-dir CACHE_DIR   Cache directory for models (optional)
 --no-cuda               Disable CUDA even if available
 --output OUTPUT         Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)
+--context-window CONTEXT_WINDOW   Maximum number of tokens to use as context for generation (default: 1024)
 ```
 
 Note: All watermarking results are automatically saved to the `output/` directory. If you don't specify a filename with `--output`, a filename will be automatically generated based on the model name and a random identifier.
@@ -121,10 +122,12 @@ python llm_watermark.py --model facebook/opt-125m --max-tokens 50
 Sample output:
 ```
 --- Watermark Statistics ---
+Model: facebook/opt-125m
 Green tokens: 42
 Red tokens: 8
 Total tokens: 50
 Green ratio: 0.8400
+Seed: 4242
 ---------------------------
 ```
 
@@ -171,6 +174,19 @@ The watermarking algorithm:
 4. This increases the probability of selecting green tokens and decreases the likelihood of red token selection
 
 A higher green ratio indicates stronger watermarking effect.
+
+### About the Seed Parameter
+
+The `--seed` parameter (default: 4242) controls randomness throughout the entire watermarking process:
+
+1. **Model Initialization**: Sets random seeds for PyTorch, NumPy, and Python's random module to ensure deterministic behavior
+2. **Prompt Selection**: When no custom prompt is provided, the seed determines which random essay is selected
+3. **Model Behavior**: Affects any stochastic elements in the model (such as dropout)
+4. **Reproducibility**: Using the same seed, model, and parameters will produce identical output
+
+Note that the seed does NOT directly influence the token partitioning into green/red lists. That process uses a deterministic hash of the previous token ID, which is independent of the global random seed.
+
+The seed value is recorded in both console output and saved output files to enable exact reproduction of results.
 
 ## References
 
