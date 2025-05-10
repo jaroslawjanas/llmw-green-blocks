@@ -376,7 +376,7 @@ def main():
     parser.add_argument("--max-tokens", type=int, default=100, help="Maximum tokens to generate")
     parser.add_argument("--green-fraction", type=float, default=0.5, help="Fraction of tokens in green list")
     parser.add_argument("--bias", type=float, default=6.0, help="Bias to add to green tokens")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument("--seed", type=int, default=4242, help="Random seed")
     parser.add_argument("--prompt", type=str, help="Custom prompt (uses random essay if not provided)")
     parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
