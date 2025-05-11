@@ -28,188 +28,110 @@ MODELS_CACHE_DIR = os.path.join(CACHE_DIR, "models")
 os.makedirs(CACHE_DIR, exist_ok=True)
 os.makedirs(MODELS_CACHE_DIR, exist_ok=True)
 
-# Models recommended for 8GB VRAM
+# Recommended models with VRAM requirements
 RECOMMENDED_MODELS = [
+    # Microsoft Phi-4 models
     {
-        "name": "facebook/opt-125m",
-        "description": "Small OPT model (125M parameters), very fast, works on CPU or GPU",
-        "min_vram": 0,  # Works on CPU
-        "tags": ["fast", "small"]
-    },
-    {
-        "name": "facebook/opt-350m",
-        "description": "Small OPT model (350M parameters), good balance of performance and speed",
-        "min_vram": 1,  # 1GB minimum
-        "tags": ["fast", "small"]
-    },
-    {
-        "name": "facebook/opt-1.3b",
-        "description": "Medium OPT model (1.3B parameters), better quality output",
-        "min_vram": 2,  # 2GB minimum
-        "tags": ["medium"]
-    },
-    {
-        "name": "facebook/opt-2.7b",
-        "description": "Large OPT model (2.7B parameters), good performance",
-        "min_vram": 5,  # 5GB minimum
-        "tags": ["large"]
-    },
-    {
-        "name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        "description": "Small but capable chat-tuned Llama model",
-        "min_vram": 2,  # 2GB minimum
-        "tags": ["medium", "chat-tuned"]
-    },
-    {
-        "name": "microsoft/phi-1_5",
-        "description": "Microsoft Phi-1.5 (1.3B parameters), excellent for its size",
-        "min_vram": 3,  # 3GB minimum
-        "tags": ["medium"]
-    },
-    {
-        "name": "microsoft/phi-2",
-        "description": "Microsoft Phi-2 (2.7B parameters), very strong performance",
-        "min_vram": 5,  # 5GB minimum
-        "tags": ["large", "chat-tuned"]
-    },
-    {
-        "name": "stabilityai/stablelm-2-1_6b",
-        "description": "StableLM 2 (1.6B parameters), balanced performance",
-        "min_vram": 3,  # 3GB minimum
-        "tags": ["medium"]
-    },
-    {
-        "name": "stabilityai/stablelm-3b-4e1t",
-        "description": "StableLM (3B parameters), good performance",
+        "name": "microsoft/Phi-4-mini-reasoning",
+        "description": "Microsoft Phi-4 Mini Reasoning (3.8B parameters), compact but powerful reasoning capabilities",
         "min_vram": 6,  # 6GB minimum
-        "tags": ["large"]
+        "tags": ["medium", "reasoning"]
     },
     {
-        "name": "google/gemma-2b",
-        "description": "Google Gemma (2B parameters), high-quality small model",
-        "min_vram": 4,  # 4GB minimum
-        "tags": ["medium", "chat-tuned"]
+        "name": "microsoft/Phi-4-reasoning",
+        "description": "Microsoft Phi-4 Reasoning (7.4B parameters), powerful reasoning and logic capabilities",
+        "min_vram": 12,  # 12GB minimum
+        "tags": ["large", "reasoning"]
     },
     {
-        "name": "google/gemma-2b-it",
-        "description": "Instruction-tuned Google Gemma (2B parameters)",
-        "min_vram": 4,  # 4GB minimum
-        "tags": ["medium", "instruction-tuned"]
+        "name": "microsoft/Phi-4-reasoning-plus",
+        "description": "Microsoft Phi-4 Reasoning Plus (14B parameters), enhanced reasoning with expanded capabilities",
+        "min_vram": 20,  # 20GB minimum
+        "tags": ["very-large", "reasoning"]
     },
+    
+    # Qwen3 models
+    {
+        "name": "Qwen/Qwen3-4B",
+        "description": "Qwen 3 (4B parameters), efficient general-purpose model with strong multilingual capabilities",
+        "min_vram": 8,  # 8GB minimum
+        "tags": ["medium", "multilingual"]
+    },
+    {
+        "name": "Qwen/Qwen3-8B",
+        "description": "Qwen 3 (8B parameters), balanced performance with excellent multilingual support",
+        "min_vram": 14,  # 14GB minimum
+        "tags": ["large", "multilingual"]
+    },
+    {
+        "name": "Qwen/Qwen3-14B",
+        "description": "Qwen 3 (14B parameters), high-quality generation with advanced capabilities",
+        "min_vram": 20,  # 20GB minimum
+        "tags": ["very-large", "multilingual"]
+    },
+    
+    # Google Gemma 3 models
     {
         "name": "google/gemma-3-1b-it",
-        "description": "Instruction-tuned Google Gemma 3 (1B parameters), latest generation",
+        "description": "Instruction-tuned Google Gemma 3 (1B parameters), compact and efficient",
         "min_vram": 3,  # 3GB minimum
+        "tags": ["small", "instruction-tuned"]
+    },
+    {
+        "name": "google/gemma-3-4b-it",
+        "description": "Instruction-tuned Google Gemma 3 (4B parameters), good balance of size and capability",
+        "min_vram": 8,  # 8GB minimum
         "tags": ["medium", "instruction-tuned"]
     },
     {
-        "name": "mistralai/Mistral-7B-v0.1",
-        "description": "Mistral 7B, can work with 8GB VRAM using quantization",
-        "min_vram": 7,  # 7GB minimum
-        "tags": ["very-large"]
-    },
-    # Higher VRAM models (8-24GB)
-    {
-        "name": "mistralai/Mistral-7B-Instruct-v0.2",
-        "description": "Instruction-tuned Mistral 7B, good quality/performance balance",
-        "min_vram": 8,  # 8GB minimum
+        "name": "google/gemma-3-12b-it",
+        "description": "Instruction-tuned Google Gemma 3 (12B parameters), high-quality responses with strong reasoning",
+        "min_vram": 18,  # 18GB minimum
         "tags": ["very-large", "instruction-tuned"]
     },
     {
-        "name": "google/gemma-7b",
-        "description": "Google Gemma (7B parameters), excellent performance",
-        "min_vram": 9,  # 9GB minimum
-        "tags": ["very-large", "chat-tuned"]
+        "name": "google/gemma-3-27b-it",
+        "description": "Instruction-tuned Google Gemma 3 (27B parameters), powerful capabilities with extensive knowledge",
+        "min_vram": 40,  # 40GB minimum
+        "tags": ["enormous", "instruction-tuned"]
     },
+    
+    # Meta Llama models
     {
-        "name": "google/gemma-7b-it",
-        "description": "Instruction-tuned Google Gemma (7B parameters)",
-        "min_vram": 9,  # 9GB minimum
-        "tags": ["very-large", "instruction-tuned"]
-    },
-    {
-        "name": "meta-llama/Llama-2-7b-hf",
-        "description": "Meta's Llama 2 (7B parameters), strong foundation model",
-        "min_vram": 10,  # 10GB minimum
-        "tags": ["very-large"]
-    },
-    {
-        "name": "meta-llama/Llama-2-7b-chat-hf",
-        "description": "Chat-tuned version of Llama 2 (7B parameters)",
-        "min_vram": 10,  # 10GB minimum
-        "tags": ["very-large", "chat-tuned"]
-    },
-    {
-        "name": "microsoft/phi-3-mini",
-        "description": "Microsoft Phi-3 Mini (3.8B parameters), extremely efficient and high-quality output",
-        "min_vram": 8,  # 8GB minimum
+        "name": "meta-llama/Llama-3.1-8B-Instruct",
+        "description": "Meta Llama 3.1 (8B parameters), instruction-tuned for chat and reasoning",
+        "min_vram": 14,  # 14GB minimum
         "tags": ["large", "instruction-tuned"]
     },
     {
-        "name": "NousResearch/Nous-Hermes-2-Mistral-7B",
-        "description": "Mistral 7B tuned with Nous dataset, excellent for instruction following",
-        "min_vram": 10,  # 10GB minimum
-        "tags": ["very-large", "instruction-tuned"]
+        "name": "meta-llama/Llama-3.2-1B",
+        "description": "Meta Llama 3.2 (1B parameters), compact base model with impressive capabilities",
+        "min_vram": 2,  # 2GB minimum
+        "tags": ["small", "base-model"]
     },
     {
-        "name": "facebook/opt-6.7b",
-        "description": "Large OPT model (6.7B parameters), more capable than smaller variants",
-        "min_vram": 12,  # 12GB minimum
-        "tags": ["very-large"]
+        "name": "meta-llama/Llama-3.2-1B-Instruct",
+        "description": "Meta Llama 3.2 (1B parameters), instruction-tuned for direct responses",
+        "min_vram": 2,  # 2GB minimum
+        "tags": ["small", "instruction-tuned"]
     },
     {
-        "name": "meta-llama/Llama-2-13b-hf",
-        "description": "Meta's Llama 2 (13B parameters), high-quality generation",
-        "min_vram": 16,  # 16GB minimum
-        "tags": ["very-large"]
+        "name": "meta-llama/Llama-3.2-3B",
+        "description": "Meta Llama 3.2 (3B parameters), efficient base model with strong general capabilities",
+        "min_vram": 6,  # 6GB minimum
+        "tags": ["medium", "base-model"]
     },
     {
-        "name": "meta-llama/Llama-2-13b-chat-hf",
-        "description": "Chat-tuned version of Llama 2 (13B parameters)",
-        "min_vram": 16,  # 16GB minimum
-        "tags": ["very-large", "chat-tuned"]
+        "name": "meta-llama/Llama-3.2-3B-Instruct",
+        "description": "Meta Llama 3.2 (3B parameters), instruction-tuned for chat and assistance",
+        "min_vram": 6,  # 6GB minimum
+        "tags": ["medium", "instruction-tuned"]
     },
     {
-        "name": "mistralai/Mixtral-8x7B-v0.1",
-        "description": "Mixture-of-Experts model combining 8 experts, powerful performance",
-        "min_vram": 20,  # 20GB minimum
-        "tags": ["very-large", "mixture-of-experts"]
-    },
-    {
-        "name": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-        "description": "Instruction-tuned Mixture-of-Experts model",
-        "min_vram": 20,  # 20GB minimum
-        "tags": ["very-large", "mixture-of-experts", "instruction-tuned"]
-    },
-    {
-        "name": "google/gemma-3-8b-it",
-        "description": "Instruction-tuned Google Gemma 3 (8B parameters), latest generation",
-        "min_vram": 12,  # 12GB minimum
-        "tags": ["very-large", "instruction-tuned"]
-    },
-    {
-        "name": "01-ai/Yi-6B",
-        "description": "Yi model (6B parameters), high-quality multilingual model",
-        "min_vram": 10,  # 10GB minimum
-        "tags": ["very-large", "multilingual"]
-    },
-    {
-        "name": "01-ai/Yi-9B",
-        "description": "Yi model (9B parameters), multilingual and high-quality",
-        "min_vram": 14,  # 14GB minimum
-        "tags": ["very-large", "multilingual"]
-    },
-    {
-        "name": "codellama/CodeLlama-13b-hf",
-        "description": "Code-specialized Llama 13B, excellent for programming tasks",
-        "min_vram": 16,  # 16GB minimum
-        "tags": ["very-large", "code"]
-    },
-    {
-        "name": "bigcode/starcoder2-15b",
-        "description": "StarCoder 2 (15B parameters), trained on code, excellent for programming",
-        "min_vram": 18,  # 18GB minimum
-        "tags": ["very-large", "code"]
+        "name": "meta-llama/Llama-3.3-70B-Instruct",
+        "description": "Meta Llama 3.3 (70B parameters), large-scale instruction-tuned model with remarkable capabilities",
+        "min_vram": 80,  # 80GB minimum
+        "tags": ["enormous", "instruction-tuned"]
     }
 ]
 

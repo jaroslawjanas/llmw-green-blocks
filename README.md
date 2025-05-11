@@ -145,14 +145,15 @@ python llm_watermark.py --bias 10.0
 
 ## Model Compatibility
 
-With 8GB VRAM, you can use models up to approximately 7B parameters using float16 precision. Recommended models for different use cases:
+The model selector now includes a curated selection of the latest models with their VRAM requirements:
 
-| Model Size | Examples | Min VRAM | Notes |
-|------------|----------|----------|-------|
-| Small (<1B) | facebook/opt-125m, facebook/opt-350m | 0-1GB | Fast, works on CPU |
-| Medium (1-2B) | facebook/opt-1.3b, TinyLlama/TinyLlama-1.1B-Chat-v1.0, microsoft/phi-1_5, google/gemma-3-1b-it | 2-3GB | Good balance |
-| Large (2-3B) | facebook/opt-2.7b, microsoft/phi-2, google/gemma-2b | 4-5GB | Better quality |
-| Very Large (7B) | mistralai/Mistral-7B-v0.1 | 7GB+ | Best quality, but at VRAM limit |
+| Model Family | Examples | Min VRAM | Notes |
+|--------------|----------|----------|-------|
+| Small (1-3B) | meta-llama/Llama-3.2-1B, google/gemma-3-1b-it | 2-3GB | Works on low-end GPUs |
+| Medium (3-4B) | microsoft/Phi-4-mini-reasoning, meta-llama/Llama-3.2-3B, google/gemma-3-4b-it | 6-8GB | Good for 8GB GPUs |
+| Large (7-8B) | Qwen/Qwen3-8B, meta-llama/Llama-3.1-8B-Instruct | 12-14GB | Requires mid-range GPU |
+| Very Large (12-14B) | microsoft/Phi-4-reasoning-plus, Qwen/Qwen3-14B, google/gemma-3-12b-it | 18-20GB | Needs high-end GPU |
+| Enormous (27-70B) | google/gemma-3-27b-it, meta-llama/Llama-3.3-70B-Instruct | 40-80GB | Requires professional GPU |
 
 ### Important Note on Model Licensing
 
