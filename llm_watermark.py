@@ -12,6 +12,7 @@ import random
 import os
 import torch
 import numpy as np
+import datetime
 from typing import List, Tuple, Dict, Optional, Union
 from datasets import load_dataset
 from transformers import (
@@ -452,7 +453,7 @@ def main():
         print(f"\nOutput saved to: {output_path}")
     else:
         # Generate a default filename based on timestamp
-        timestamp = str(int(random.random() * 10000))
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         model_name = args.model.split("/")[-1]
         output_file = f"{model_name}_gen_{timestamp}.txt"
         output_path = os.path.join(OUTPUT_DIR, output_file)

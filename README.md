@@ -109,7 +109,7 @@ All options:
 --context-window CONTEXT_WINDOW   Maximum number of tokens to use as context for generation (default: 1024)
 ```
 
-Note: All watermarking results are automatically saved to the `output/` directory. If you don't specify a filename with `--output`, a filename will be automatically generated based on the model name and a random identifier.
+Note: All watermarking results are automatically saved to the `output/` directory. If you don't specify a filename with `--output`, a filename will be automatically generated based on the model name and a timestamp (format: `modelname_gen_YYYYMMDD_HHMMSS.txt`). This ensures that multiple runs don't overwrite each other.
 
 ## Examples
 
