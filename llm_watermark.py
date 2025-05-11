@@ -348,7 +348,9 @@ def get_random_essay(seed=None) -> str:
     return essay_text
 
 
-def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str, seed: int, model_name: str):
+def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str, 
+                 seed: int, model_name: str, context_window: int, bias: float, 
+                 green_fraction: float):
     """
     Save the prompt, generated text and stats to a file.
     
@@ -357,8 +359,11 @@ def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str
         generated_text: The generated text
         stats: Statistics about the watermarking
         output_file: Path to the output file
-        seed: Random seed used for generation (prompt sampling)
+        seed: Random seed used for generation
         model_name: Name of the model used for generation
+        context_window: Maximum context window size
+        bias: Bias value added to green tokens
+        green_fraction: Fraction of tokens in green list
     """
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("=== INPUT PROMPT ===\n")
@@ -372,6 +377,9 @@ def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str
         f.write(f"Total tokens: {stats['total_tokens']}\n")
         f.write(f"Green ratio: {stats['green_ratio']:.4f}\n")
         f.write(f"Seed: {seed}\n")
+        f.write(f"Context window: {context_window}\n")
+        f.write(f"Bias: {bias}\n")
+        f.write(f"Green fraction: {green_fraction}\n")
 
 def main():
     parser = argparse.ArgumentParser(description="LLM Watermarking Implementation")
@@ -430,13 +438,17 @@ def main():
     print(f"Total tokens: {stats['total_tokens']}")
     print(f"Green ratio: {stats['green_ratio']:.4f}")
     print(f"Seed: {args.seed}")
+    print(f"Context window: {args.context_window}")
+    print(f"Bias: {args.bias}")
+    print(f"Green fraction: {args.green_fraction}")
     print("---------------------------")
     
     # Save output to file if requested
     if args.output:
         output_path = os.path.join(OUTPUT_DIR, args.output)
-        # Save to file with seed information and model name
-        save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model)
+        # Save to file with all parameters
+        save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model,
+                    args.context_window, args.bias, args.green_fraction)
         print(f"\nOutput saved to: {output_path}")
     else:
         # Generate a default filename based on timestamp
@@ -444,8 +456,9 @@ def main():
         model_name = args.model.split("/")[-1]
         output_file = f"{model_name}_gen_{timestamp}.txt"
         output_path = os.path.join(OUTPUT_DIR, output_file)
-        # Stats for file output with seed and model name
-        save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model)
+        # Stats for file output with all parameters
+        save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model,
+                    args.context_window, args.bias, args.green_fraction)
         print(f"\nOutput saved to: {output_path}")
     
 
