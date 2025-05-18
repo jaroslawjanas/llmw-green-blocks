@@ -107,6 +107,7 @@ All options:
 --no-cuda               Disable CUDA even if available
 --output OUTPUT         Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)
 --context-window CONTEXT_WINDOW   Maximum number of tokens to use as context for generation (default: 1024)
+--temperature, --temp TEMPERATURE Sampling temperature (default: 0.0 = greedy sampling, higher = more random)
 ```
 
 Note: All watermarking results are automatically saved to the `output/` directory. If you don't specify a filename with `--output`, a filename will be automatically generated based on the model name and a timestamp (format: `modelname_gen_YYYYMMDD_HHMMSS.txt`). This ensures that multiple runs don't overwrite each other.
@@ -128,6 +129,10 @@ Red tokens: 8
 Total tokens: 50
 Green ratio: 0.8400
 Seed: 4242
+Context window: 1024
+Bias: 6.0
+Green fraction: 0.5
+Temperature: 0.0
 ---------------------------
 ```
 

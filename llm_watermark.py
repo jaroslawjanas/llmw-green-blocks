@@ -52,6 +52,7 @@ class LLMWatermarker:
         cache_dir: str = CACHE_DIR,
         device: Optional[str] = None,
         context_window: int = 1024,
+        temperature: float = 0.0,
     ):
         """
         Initialize the watermarker with the specified model and parameters.
@@ -64,6 +65,7 @@ class LLMWatermarker:
             cache_dir: Directory to cache models
             device: Device to run model on ('cuda', 'cpu', or None for auto-detection)
             context_window: Maximum number of tokens to use as context for generation (default: 1024)
+            temperature: Sampling temperature (default: 0.0 = greedy sampling, higher = more random)
         """
         self.model_name = model_name
         self.green_list_fraction = green_list_fraction
@@ -71,6 +73,7 @@ class LLMWatermarker:
         self.seed = seed
         self.cache_dir = cache_dir
         self.context_window = context_window
+        self.temperature = temperature
         
         # Set device
         if device is None:
@@ -261,11 +264,21 @@ class LLMWatermarker:
             # Modify logits with watermark
             modified_logits = self._modify_logits(logits, prev_token_id)
             
+            # Apply temperature if set
+            if self.temperature > 0:
+                # Scale logits by temperature
+                modified_logits = modified_logits / self.temperature
+                
             # Get probabilities through softmax
             probs = torch.nn.functional.softmax(modified_logits, dim=-1)
             
-            # Greedy sampling (select token with highest probability)
-            next_token_id = torch.argmax(probs, dim=-1).item()
+            # Token sampling based on temperature
+            if self.temperature == 0 or self.temperature < 1e-6:
+                # Greedy sampling (select token with highest probability)
+                next_token_id = torch.argmax(probs, dim=-1).item()
+            else:
+                # Sample from the distribution
+                next_token_id = torch.multinomial(probs.squeeze(), 1).item()
             
             # Track green/red selection
             green_tokens, red_tokens = self._get_red_green_tokens(prev_token_id)
@@ -351,7 +364,7 @@ def get_random_essay(seed=None) -> str:
 
 def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str, 
                  seed: int, model_name: str, context_window: int, bias: float, 
-                 green_fraction: float):
+                 green_fraction: float, temperature: float):
     """
     Save the prompt, generated text and stats to a file.
     
@@ -365,6 +378,7 @@ def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str
         context_window: Maximum context window size
         bias: Bias value added to green tokens
         green_fraction: Fraction of tokens in green list
+        temperature: Sampling temperature used for generation
     """
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("=== INPUT PROMPT ===\n")
@@ -381,6 +395,7 @@ def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str
         f.write(f"Context window: {context_window}\n")
         f.write(f"Bias: {bias}\n")
         f.write(f"Green fraction: {green_fraction}\n")
+        f.write(f"Temperature: {temperature}\n")
 
 def main():
     parser = argparse.ArgumentParser(description="LLM Watermarking Implementation")
@@ -394,6 +409,7 @@ def main():
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
     parser.add_argument("--output", type=str, help="Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)")
     parser.add_argument("--context-window", type=int, default=1024, help="Maximum number of tokens to use as context for generation (default: 1024)")
+    parser.add_argument("--temperature", "--temp", type=float, default=0.0, help="Sampling temperature (default: 0.0 = greedy sampling, higher = more random)")
     
     args = parser.parse_args()
     
@@ -408,7 +424,8 @@ def main():
         seed=args.seed,
         cache_dir=args.cache_dir,
         device=device,
-        context_window=args.context_window
+        context_window=args.context_window,
+        temperature=args.temperature
     )
     
     # Get prompt
@@ -442,6 +459,7 @@ def main():
     print(f"Context window: {args.context_window}")
     print(f"Bias: {args.bias}")
     print(f"Green fraction: {args.green_fraction}")
+    print(f"Temperature: {args.temperature}")
     print("---------------------------")
     
     # Save output to file if requested
@@ -449,7 +467,7 @@ def main():
         output_path = os.path.join(OUTPUT_DIR, args.output)
         # Save to file with all parameters
         save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model,
-                    args.context_window, args.bias, args.green_fraction)
+                    args.context_window, args.bias, args.green_fraction, args.temperature)
         print(f"\nOutput saved to: {output_path}")
     else:
         # Generate a default filename based on timestamp
@@ -459,7 +477,7 @@ def main():
         output_path = os.path.join(OUTPUT_DIR, output_file)
         # Stats for file output with all parameters
         save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model,
-                    args.context_window, args.bias, args.green_fraction)
+                    args.context_window, args.bias, args.green_fraction, args.temperature)
         print(f"\nOutput saved to: {output_path}")
     
 
