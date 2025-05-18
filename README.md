@@ -7,11 +7,15 @@ This project implements the red-green token watermarking technique proposed by [
 The watermarking technique works as follows:
 
 1. Generate logits from the model
-2. Randomly split the vocabulary into "green" and "red" token lists based on the hash of the previous token
+2. Randomly split the vocabulary into "green" and "red" token lists based on the hash of the previous token(s)
 3. Add a bias value (typically 6.0) to the logits of green tokens
 4. Apply softmax to convert logits to probabilities
-5. Select the token with highest probability (greedy sampling)
+5. Select the token with highest probability (or sample based on temperature)
 6. Track how many green vs. red tokens are selected during generation
+
+Also supports:
+- Variable number of previous tokens to use for hashing (--hash-window)
+- Temperature-based sampling (--temperature)
 
 This technique increases the likelihood of selecting tokens from the green list, creating a statistical pattern that can be analyzed.
 
@@ -108,6 +112,7 @@ All options:
 --output OUTPUT         Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)
 --context-window CONTEXT_WINDOW   Maximum number of tokens to use as context for generation (default: 1024)
 --temperature, --temp TEMPERATURE Sampling temperature (default: 0.0 = greedy sampling, higher = more random)
+--hash-window HASH_WINDOW         Number of previous tokens to hash together (default: 1)
 ```
 
 Note: All watermarking results are automatically saved to the `output/` directory. If you don't specify a filename with `--output`, a filename will be automatically generated based on the model name and a timestamp (format: `modelname_gen_YYYYMMDD_HHMMSS.txt`). This ensures that multiple runs don't overwrite each other.
@@ -133,6 +138,7 @@ Context window: 1024
 Bias: 6.0
 Green fraction: 0.5
 Temperature: 0.0
+Hash window: 1
 ---------------------------
 ```
 
@@ -174,10 +180,13 @@ If you encounter errors like "403 Client Error: Forbidden" when downloading a mo
 
 The watermarking algorithm:
 
-1. For each generated token, the previous token's ID is used to seed a random number generator
+1. For each generated token, a window of previous token IDs is used to seed a random number generator
+   - The window size is controlled by the `--hash-window` parameter (default: 1 token)
+   - Using more tokens creates a more context-dependent watermark
 2. The vocabulary is randomly partitioned into two sets: green (50% by default) and red (50%)
 3. A bias value (default: 6.0) is added to the logits of all green tokens
-4. This increases the probability of selecting green tokens and decreases the likelihood of red token selection
+4. With temperature=0, the highest probability token is selected; with temperature>0, tokens are sampled from the adjusted distribution
+5. This increases the probability of selecting green tokens and decreases the likelihood of red token selection
 
 A higher green ratio indicates stronger watermarking effect.
 
