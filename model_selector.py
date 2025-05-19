@@ -134,10 +134,28 @@ RECOMMENDED_MODELS = [
         "tags": ["medium", "instruction-tuned"]
     },
     {
+        "name": "meta-llama/Llama-3.2-11B-Vision-Instruct",
+        "description": "Meta Llama 3.2 (11B parameters), vision-language model for multimodal chat and image understanding",
+        "min_vram": 16,  # 16GB minimum
+        "tags": ["large", "instruction-tuned", "vision", "multimodal"]
+    },
+    {
         "name": "meta-llama/Llama-3.3-70B-Instruct",
         "description": "Meta Llama 3.3 (70B parameters), large-scale instruction-tuned model with remarkable capabilities",
         "min_vram": 80,  # 80GB minimum
         "tags": ["enormous", "instruction-tuned"]
+    },
+    {
+        "name": "meta-llama/Llama-4-Scout-17B-16E",
+        "description": "Meta Llama 4 Scout (17B parameters), high-performance base model with cutting-edge capabilities",
+        "min_vram": 24,  # 24GB minimum
+        "tags": ["very-large", "base-model"]
+    },
+    {
+        "name": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+        "description": "Meta Llama 4 Scout (17B parameters), instruction-tuned for advanced reasoning and assistance",
+        "min_vram": 24,  # 24GB minimum
+        "tags": ["very-large", "instruction-tuned"]
     }
 ]
 
@@ -280,8 +298,8 @@ def main():
     parser = argparse.ArgumentParser(description="LLM Model Selector")
     parser.add_argument("--list", action="store_true", help="List all recommended models")
     parser.add_argument("--filter", type=str, help="Filter models by tag (e.g., small, medium, large)")
-    parser.add_argument("--download", type=str, help="Download a specific model")
-    # Removed set-default argument as requested
+    parser.add_argument("--download", type=str, help="Download a model from the recommended list")
+    parser.add_argument("--download-custom", type=str, help="Download any model by specifying its full name (e.g., 'organization/model-name')")
     parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
     
     args = parser.parse_args()
@@ -315,6 +333,14 @@ def main():
     elif args.download:
         download_model(args.download, args.cache_dir)
     
+    elif args.download_custom:
+        print(f"Attempting to download custom model: {args.download_custom}")
+        try:
+            download_model(args.download_custom, args.cache_dir)
+        except Exception as e:
+            print(f"Error downloading model: {e}")
+            print("Please check the model name and ensure you have the correct permissions.")
+    
     # set_default functionality removed
     
     else:
@@ -333,10 +359,11 @@ def main():
         
         print("\nOptions:")
         print("1. List all compatible models")
-        print("2. Download a model")
-        print("3. Exit")
+        print("2. Download a model from the list")
+        print("3. Download a custom model by name")
+        print("4. Exit")
         
-        choice = input("\nEnter your choice (1-3): ")
+        choice = input("\nEnter your choice (1-4): ")
         
         if choice == "1":
             print("\nCompatible models:")
@@ -359,6 +386,19 @@ def main():
                 print("Invalid model number.")
                 
         elif choice == "3":
+            # Download a custom model by name
+            custom_model = input("\nEnter the model name (e.g., 'organization/model-name'): ")
+            if custom_model:
+                print(f"\nAttempting to download model: {custom_model}")
+                try:
+                    download_model(custom_model, args.cache_dir)
+                except Exception as e:
+                    print(f"Error downloading model: {e}")
+                    print("Please check the model name and ensure you have the correct permissions.")
+            else:
+                print("No model name provided.")
+                
+        elif choice == "4":
             # Exit the program
             print("Exiting model selector.")
 
