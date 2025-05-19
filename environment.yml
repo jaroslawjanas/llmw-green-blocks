@@ -14,6 +14,7 @@ dependencies:
   - conda-forge::tqdm=4.67.1
   - conda-forge::numpy=2.2.5
   - conda-forge::sentencepiece=0.2.0
+  - conda-forge::pillow=11.2.1 # Some models might need this for AutoProcessor
   - pip
   - pip:
     - accelerate

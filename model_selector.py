@@ -38,14 +38,20 @@ RECOMMENDED_MODELS = [
         "tags": ["medium", "reasoning"]
     },
     {
+        "name": "microsoft/phi-4",
+        "description": "Microsoft Phi-4 base model (14.7B parameters), versatile foundation model with strong general capabilities",
+        "min_vram": 20,  # 20GB minimum, similar to other 14B models
+        "tags": ["very-large", "base-model"]
+    },
+    {
         "name": "microsoft/Phi-4-reasoning",
-        "description": "Microsoft Phi-4 Reasoning (7.4B parameters), powerful reasoning and logic capabilities",
+        "description": "Microsoft Phi-4 Reasoning (14.7B parameters), powerful reasoning and logic capabilities",
         "min_vram": 12,  # 12GB minimum
         "tags": ["large", "reasoning"]
     },
     {
         "name": "microsoft/Phi-4-reasoning-plus",
-        "description": "Microsoft Phi-4 Reasoning Plus (14B parameters), enhanced reasoning with expanded capabilities",
+        "description": "Microsoft Phi-4 Reasoning Plus (14.7B parameters), enhanced reasoning with expanded capabilities",
         "min_vram": 20,  # 20GB minimum
         "tags": ["very-large", "reasoning"]
     },

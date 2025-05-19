@@ -22,6 +22,8 @@ from transformers import (
     PreTrainedTokenizer,
 )
 from tqdm import tqdm
+from model_formatters import format_prompt_for_model
+from utils import load_hf_token
 
 # Set the default cache and output directories
 CACHE_DIR = "./cache"
@@ -32,15 +34,6 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 os.makedirs(MODELS_CACHE_DIR, exist_ok=True)
 os.makedirs(DATASETS_CACHE_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-def load_hf_token():
-    """Load HuggingFace token from hf_token file."""
-    token_path = "hf_token"
-    token = None
-    if os.path.exists(token_path):
-        with open(token_path, "r") as f:
-            token = f.read().strip()
-    return token
 
 class LLMWatermarker:
     def __init__(
@@ -240,8 +233,11 @@ class LLMWatermarker:
         self.green_tokens_selected = 0
         self.red_tokens_selected = 0
         
-        # Tokenize the prompt
-        input_ids = self.tokenizer.encode(prompt, return_tensors="pt").to(self.device)
+        # Format the prompt for the specific model
+        formatted_prompt = format_prompt_for_model(prompt, self.model_name, self.tokenizer)
+        
+        # Tokenize the formatted prompt
+        input_ids = self.tokenizer.encode(formatted_prompt, return_tensors="pt").to(self.device)
         
         # Store generated ids
         generated_ids = input_ids.clone()[0].tolist()
