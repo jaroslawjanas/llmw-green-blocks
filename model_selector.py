@@ -159,32 +159,58 @@ RECOMMENDED_MODELS = [
     }
 ]
 
-def get_available_vram() -> float:
+def get_gpu_info() -> tuple:
     """
-    Get available VRAM in GB.
+    Get information about available GPUs.
     
     Returns:
-        Available VRAM in GB, or 0 if no GPU is available
+        Tuple of (num_gpus, min_gpu_vram, total_vram)
+        where min_gpu_vram is the VRAM of the GPU with least memory in GB
+        and total_vram is the sum of available VRAM across all GPUs
     """
     if not torch.cuda.is_available():
-        return 0
+        return 0, 0, 0
     
     try:
-        # Get total VRAM
-        device = torch.cuda.current_device()
-        vram_total = torch.cuda.get_device_properties(device).total_memory / (1024**3)  # Convert to GB
+        # Get number of GPUs
+        num_gpus = torch.cuda.device_count()
         
-        # Get cached/allocated VRAM
-        vram_allocated = torch.cuda.memory_allocated(device) / (1024**3)  # Convert to GB
-        vram_reserved = torch.cuda.memory_reserved(device) / (1024**3)  # Convert to GB
+        if num_gpus == 0:
+            return 0, 0, 0
+            
+        # Calculate available VRAM for each GPU
+        gpu_vram_available = []
         
-        # Calculate available VRAM (approximation)
-        vram_available = vram_total - max(vram_allocated, vram_reserved)
+        for device in range(num_gpus):
+            # Get total VRAM
+            vram_total = torch.cuda.get_device_properties(device).total_memory / (1024**3)  # Convert to GB
+            
+            # Get cached/allocated VRAM
+            vram_allocated = torch.cuda.memory_allocated(device) / (1024**3)  # Convert to GB
+            vram_reserved = torch.cuda.memory_reserved(device) / (1024**3)  # Convert to GB
+            
+            # Calculate available VRAM (approximation)
+            vram_available = vram_total - max(vram_allocated, vram_reserved)
+            gpu_vram_available.append(vram_available)
         
-        return vram_available
+        # Find minimum VRAM among all GPUs and calculate total VRAM
+        min_gpu_vram = min(gpu_vram_available) if gpu_vram_available else 0
+        total_vram = sum(gpu_vram_available)
+        
+        return num_gpus, min_gpu_vram, total_vram
     except Exception as e:
-        print(f"Error getting VRAM: {e}")
-        return 0
+        print(f"Error getting GPU info: {e}")
+        return 0, 0, 0
+
+def get_available_vram() -> float:
+    """
+    Get total available VRAM in GB across all GPUs.
+    
+    Returns:
+        Total available VRAM in GB, or 0 if no GPU is available
+    """
+    _, _, total_vram = get_gpu_info()
+    return total_vram
 
 def filter_models_by_vram(models: List[Dict[str, Any]], available_vram: float) -> List[Dict[str, Any]]:
     """
@@ -304,12 +330,16 @@ def main():
     
     args = parser.parse_args()
     
-    # Check available VRAM
-    available_vram = get_available_vram()
-    print(f"Available VRAM: {available_vram:.2f}GB")
+    # Check available GPU resources
+    num_gpus, min_gpu_vram, total_vram = get_gpu_info()
     
-    # Filter models based on available VRAM
-    compatible_models = filter_models_by_vram(RECOMMENDED_MODELS, available_vram)
+    if num_gpus > 0:
+        print(f"GPUs: {num_gpus} x {min_gpu_vram:.2f}GB = {total_vram:.2f}GB")
+    else:
+        print("No GPU detected. Running in CPU mode.")
+    
+    # Filter models based on total available VRAM across all GPUs
+    compatible_models = filter_models_by_vram(RECOMMENDED_MODELS, total_vram)
     
     if args.list:
         # If tag filter is provided, apply it
