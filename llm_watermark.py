@@ -205,10 +205,12 @@ class LLMWatermarker:
         # Clone logits for modification
         modified_logits = logits.clone()
         
-        # Add bias to each green token individually, checking bounds
-        for token_id in green_tokens:
-            if token_id < vocab_size:
-                modified_logits[token_id] += self.bias
+        # Filter green tokens to ensure they're within vocabulary bounds
+        valid_green_tokens = [token_id for token_id in green_tokens if token_id < vocab_size]
+        
+        # Vectorized bias application - apply bias to all valid green tokens at once
+        if valid_green_tokens:  # Only proceed if we have valid tokens
+            modified_logits[valid_green_tokens] += self.bias
         
         # Reshape back to original format
         return modified_logits.unsqueeze(0).unsqueeze(0)
