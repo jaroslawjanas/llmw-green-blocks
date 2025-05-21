@@ -13,3 +13,6 @@ model_config.json
 
 # HuggingFace token file
 hf_token
+
+# Exclude unison profile files
+*.prf
