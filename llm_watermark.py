@@ -141,7 +141,7 @@ class LLMWatermarker:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             
-    def _get_red_green_tokens(self, token_ids: List[int]) -> Tuple[List[int], List[int]]:
+    def _get_red_green_tokens(self, token_ids: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Generate red and green token lists based on the hash of previous tokens.
         
@@ -151,28 +151,43 @@ class LLMWatermarker:
         Returns:
             Tuple of (green_tokens, red_tokens)
         """
+        # Convert token_ids to tensor for hashing
+        token_ids_tensor = torch.tensor(token_ids, dtype=torch.int64)
+        
         # Create a hash from the specified window of tokens
-        hash_input = "-".join([str(tid) for tid in token_ids])
+        # Join token IDs with hyphens using tensor operations
+        hash_input = "".join([str(tid.item()) + "-" for tid in token_ids_tensor]).rstrip("-")
         hash_object = hashlib.sha256(hash_input.encode())
         hash_hex = hash_object.hexdigest()
         
         # Convert hash to a numeric seed
         hash_seed = int(hash_hex, 16) % (2**32)
         
-        # Create a local random generator with this seed
-        rng = random.Random(hash_seed)
-        
         # Get vocabulary size
         vocab_size = len(self.tokenizer)
         
-        # Generate a random permutation of token indices
-        all_tokens = list(range(vocab_size))
-        rng.shuffle(all_tokens)
+        # Create a tensor of all token indices
+        all_tokens = torch.arange(vocab_size, device=self.device)
         
-        # Split into green and red lists
+        # We need to shuffle the tensor based on the hash seed
+        # Since PyTorch doesn't have a seeded shuffle operation directly,
+        # we'll use a permutation approach
+        
+        # Set the random seed based on our hash
+        torch.manual_seed(hash_seed)
+        
+        # Generate random values and sort to create permutation
+        random_values = torch.rand(vocab_size, device=self.device)
+        _, permutation = torch.sort(random_values)
+        shuffled_tokens = all_tokens[permutation]
+        
+        # Reset the random seed to avoid affecting other operations
+        torch.manual_seed(self.seed)
+        
+        # Split into green and red lists using tensor operations
         split_point = int(vocab_size * self.green_list_fraction)
-        green_tokens = all_tokens[:split_point]
-        red_tokens = all_tokens[split_point:]
+        green_tokens = shuffled_tokens[:split_point]  # Keep as tensor
+        red_tokens = shuffled_tokens[split_point:]    # Keep as tensor
         
         return green_tokens, red_tokens
         
@@ -199,17 +214,18 @@ class LLMWatermarker:
         # Get vocabulary size from logits
         vocab_size = logits.shape[-1]
         
-        # Get green and red tokens
+        # Get green and red tokens as tensors
         green_tokens, _ = self._get_red_green_tokens(token_window)
         
         # Clone logits for modification
         modified_logits = logits.clone()
         
         # Filter green tokens to ensure they're within vocabulary bounds
-        valid_green_tokens = [token_id for token_id in green_tokens if token_id < vocab_size]
+        mask = green_tokens < vocab_size
+        valid_green_tokens = green_tokens[mask]
         
         # Vectorized bias application - apply bias to all valid green tokens at once
-        if valid_green_tokens:  # Only proceed if we have valid tokens
+        if valid_green_tokens.numel() > 0:  # Only proceed if we have valid tokens
             modified_logits[valid_green_tokens] += self.bias
         
         # Reshape back to original format
@@ -317,7 +333,10 @@ class LLMWatermarker:
             # Check vocabulary bounds for safety
             vocab_size = len(self.tokenizer)
             if next_token_id < vocab_size:  # Make sure token is in vocabulary range
-                if next_token_id in green_tokens:
+                # Check if next_token_id is in green_tokens using tensor operations
+                next_token_tensor = torch.tensor(next_token_id, device=self.device)
+                is_green = (green_tokens == next_token_tensor).any().item()
+                if is_green:
                     self.green_tokens_selected += 1
                 else:
                     self.red_tokens_selected += 1
