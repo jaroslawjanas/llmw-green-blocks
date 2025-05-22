@@ -144,91 +144,124 @@ class LLMWatermarker:
     def _get_red_green_tokens(self, token_ids: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Generate red and green token lists based on the hash of previous tokens.
+        This creates a deterministic division of the vocabulary into "green" tokens
+        (which receive a bias during generation) and "red" tokens (which don't).
         
         Args:
-            token_ids: List of token IDs to hash
+            token_ids: List of token IDs to hash (e.g., [101, 256, 512])
             
         Returns:
-            Tuple of (green_tokens, red_tokens)
+            Tuple of (green_tokens, red_tokens) as tensors on the device
         """
-        # Convert token_ids to tensor for hashing
+        # Convert token_ids list to a PyTorch tensor for efficient processing
+        # Example: if token_ids is [101, 256, 512], token_ids_tensor becomes tensor([101, 256, 512])
         token_ids_tensor = torch.tensor(token_ids, dtype=torch.int64)
         
-        # Create a hash from the specified window of tokens
-        # Join token IDs with hyphens using tensor operations
+        # Create a hash from the specified window of tokens by joining them with hyphens
+        # Example: if token_ids_tensor is tensor([101, 256, 512]), hash_input becomes "101-256-512"
         hash_input = "".join([str(tid.item()) + "-" for tid in token_ids_tensor]).rstrip("-")
         hash_object = hashlib.sha256(hash_input.encode())
         hash_hex = hash_object.hexdigest()
         
-        # Convert hash to a numeric seed
+        # Convert the hexadecimal hash to a 32-bit integer for use as a random seed
+        # This ensures deterministic outcomes for the same input token sequence
         hash_seed = int(hash_hex, 16) % (2**32)
         
-        # Get vocabulary size
+        # Get the total number of tokens in the model's vocabulary
         vocab_size = len(self.tokenizer)
         
-        # Create a tensor of all token indices
+        # Create a tensor containing all possible token indices (0 to vocab_size-1)
+        # Example: if vocab_size is 3000, all_tokens becomes tensor([0, 1, 2, ..., 2999])
         all_tokens = torch.arange(vocab_size, device=self.device)
         
-        # We need to shuffle the tensor based on the hash seed
-        # Since PyTorch doesn't have a seeded shuffle operation directly,
-        # we'll use a permutation approach
+        # PyTorch doesn't have a direct seeded shuffle operation, so we implement
+        # a deterministic shuffle using random values and sorting
         
-        # Set the random seed based on our hash
+        # Set PyTorch's random generator to use our hash-derived seed
+        # This makes the shuffling deterministic based on the input tokens
         torch.manual_seed(hash_seed)
         
-        # Generate random values and sort to create permutation
+        # Create random values and sort them to generate a permutation of indices
+        # Example: random_values might be tensor([0.12, 0.95, 0.33, ...])
         random_values = torch.rand(vocab_size, device=self.device)
+        # Sort these values to get a permutation tensor
+        # Example: permutation might be tensor([0, 2, 1, ...]) if 0.12 is smallest, 0.33 is next, etc.
         _, permutation = torch.sort(random_values)
+        # Use this permutation to shuffle the token indices
+        # This creates a deterministic random ordering of all vocabulary tokens
         shuffled_tokens = all_tokens[permutation]
         
-        # Reset the random seed to avoid affecting other operations
+        # Reset the random seed back to the original seed of the LLMWatermarker
+        # This prevents the temporary seed from affecting other random operations
         torch.manual_seed(self.seed)
         
-        # Split into green and red lists using tensor operations
+        # Split the shuffled tokens into "green" and "red" lists
+        # Green tokens will get a positive bias during generation
         split_point = int(vocab_size * self.green_list_fraction)
-        green_tokens = shuffled_tokens[:split_point]  # Keep as tensor
-        red_tokens = shuffled_tokens[split_point:]    # Keep as tensor
+        # Example: if green_list_fraction is 0.5 and vocab_size is 3000,
+        # the first 1500 tokens in shuffled_tokens become green tokens
+        green_tokens = shuffled_tokens[:split_point]  # Keep as tensor for efficiency
+        # The remaining tokens become red tokens
+        red_tokens = shuffled_tokens[split_point:]    # Keep as tensor for efficiency
         
         return green_tokens, red_tokens
         
     def _modify_logits(self, logits: torch.Tensor, token_window: List[int]) -> torch.Tensor:
         """
         Modify logits by adding bias to green tokens.
+        This is the core watermarking function that biases the model's predictions
+        toward selecting tokens from the "green list" determined by previous tokens.
         
         Args:
-            logits: Original logits from the model
-            token_window: List of previous token IDs to use for hashing
+            logits: Original logits from the model (prediction scores for each token)
+            token_window: List of previous token IDs to use for hashing (e.g., [101, 256, 512])
             
         Returns:
-            Modified logits tensor
+            Modified logits tensor with bias added to green tokens
         """
         # Ensure logits are in the right shape (batch_size, seq_len, vocab_size)
         # The tensor might be (1, 1, vocab_size) or just (1, vocab_size)
         if len(logits.shape) == 3:
             # Get the last token's logits and flatten to 1D
+            # Example: if logits is tensor([[[1.2, 0.8, -0.5, ...]]])
+            # This becomes tensor([1.2, 0.8, -0.5, ...])
             logits = logits[0, -1, :]
         elif len(logits.shape) == 2:
             # Already (batch_size, vocab_size), get first batch
+            # Example: if logits is tensor([[1.2, 0.8, -0.5, ...]])
+            # This becomes tensor([1.2, 0.8, -0.5, ...])
             logits = logits[0, :]
         
         # Get vocabulary size from logits
+        # Example: if logits tensor has 50,000 elements, vocab_size will be 50,000
         vocab_size = logits.shape[-1]
         
-        # Get green and red tokens as tensors
+        # Get green and red tokens as tensors using the deterministic hash of previous tokens
+        # Example: based on token_window [101, 256, 512], this might return
+        # green_tokens as tensor([42, 900, 5, ...]) and red_tokens (which we don't use here)
         green_tokens, _ = self._get_red_green_tokens(token_window)
         
-        # Clone logits for modification
+        # Clone logits for modification to avoid affecting the original tensor
+        # This creates a new tensor with the same values that we can safely modify
         modified_logits = logits.clone()
         
-        # Filter green tokens to ensure they're within vocabulary bounds
+        # Filter green tokens to ensure they're within vocabulary bounds using tensor operations
+        # Example: if vocab_size is 50,000 and green_tokens contains a value 60,000,
+        # we create a boolean mask tensor([True, True, True, False, ...]) for values < 50,000
         mask = green_tokens < vocab_size
+        # Apply the mask to get only valid green tokens
+        # Example: valid_green_tokens becomes tensor([42, 900, 5, ...]) without any out-of-bounds tokens
         valid_green_tokens = green_tokens[mask]
         
         # Vectorized bias application - apply bias to all valid green tokens at once
+        # This means tokens in the "green list" will have higher probability of being selected
         if valid_green_tokens.numel() > 0:  # Only proceed if we have valid tokens
+            # Example: if self.bias is 6.0, this adds 6.0 to the logits for all green tokens
+            # For the token indices in valid_green_tokens
             modified_logits[valid_green_tokens] += self.bias
         
-        # Reshape back to original format
+        # Reshape back to original format for compatibility with the model's expectations
+        # Example: from tensor([1.2, 0.8, -0.5, ...]) back to tensor([[[1.2, 0.8, -0.5, ...]]])
         return modified_logits.unsqueeze(0).unsqueeze(0)
         
     def generate_text(
@@ -327,19 +360,26 @@ class LLMWatermarker:
             end_time = time.time()
             sampling_time += end_time - start_time
             
-            # Track green/red selection
+            # Track whether the selected token was from the green or red list for watermark statistics
+            # Get the current division of tokens into green and red based on previous tokens
             green_tokens, red_tokens = self._get_red_green_tokens(token_window)
             
             # Check vocabulary bounds for safety
             vocab_size = len(self.tokenizer)
             if next_token_id < vocab_size:  # Make sure token is in vocabulary range
-                # Check if next_token_id is in green_tokens using tensor operations
+                # Create a tensor from the next token ID to enable vectorized comparison
+                # Example: if next_token_id is 42, this becomes tensor(42) on the device
                 next_token_tensor = torch.tensor(next_token_id, device=self.device)
+                
+                # Use tensor operations to efficiently check if the token is in the green list
+                # Example: if green_tokens contains 42, this returns True, otherwise False
                 is_green = (green_tokens == next_token_tensor).any().item()
+                
+                # Update statistics counters based on whether the selected token was green or red
                 if is_green:
-                    self.green_tokens_selected += 1
+                    self.green_tokens_selected += 1  # Token was from the green list (biased)
                 else:
-                    self.red_tokens_selected += 1
+                    self.red_tokens_selected += 1    # Token was from the red list (unbiased)
             
             # Update progress bar with stats
             green_ratio = self.green_tokens_selected / (self.green_tokens_selected + self.red_tokens_selected + 1e-10)
