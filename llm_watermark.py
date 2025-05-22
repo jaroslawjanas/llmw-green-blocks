@@ -348,16 +348,34 @@ class LLMWatermarker:
             "green_ratio": self.green_tokens_selected / (self.green_tokens_selected + self.red_tokens_selected + 1e-10)
         }
 
+        # Calculate time per token
+        total_tokens = stats['total_tokens']
+        if total_tokens > 0:
+            prompt_formatting_per_token = prompt_formatting_duration / total_tokens
+            tokenization_per_token = tokenization_duration / total_tokens
+            logits_generation_per_token = logits_generation_time / total_tokens
+            modify_logits_per_token = modify_logits_time / total_tokens
+            sampling_per_token = sampling_time / total_tokens
+            total_per_token = total_duration / total_tokens
+        else:
+            prompt_formatting_per_token = 0.0
+            tokenization_per_token = 0.0
+            logits_generation_per_token = 0.0
+            modify_logits_per_token = 0.0
+            sampling_per_token = 0.0
+            total_per_token = 0.0
+
         # Print timing summary
         print("\n--- Timing Summary (s) ---")
-        print(f"{'prompt formatting:':<30} {prompt_formatting_duration:.4f}")
-        print(f"{'tokenization:':<30} {tokenization_duration:.4f}")
-        print(f"{'logits generation:':<30} {logits_generation_time:.4f}")
-        print(f"{'modify logits (watermarking):':<30} {modify_logits_time:.4f}")
-        print(f"{'sampling:':<30} {sampling_time:.4f}")
-        print(f"{'total time:':<30} {total_duration:.4f}")
+        print(f"{'':<30} {'total':>10}  |  {'per token'}")
+        print(f"{'prompt formatting:':<30} {prompt_formatting_duration:>10.2f}  |  {prompt_formatting_per_token:.4f}")
+        print(f"{'tokenization:':<30} {tokenization_duration:>10.2f}  |  {tokenization_per_token:.4f}")
+        print(f"{'logits generation:':<30} {logits_generation_time:>10.2f}  |  {logits_generation_per_token:.4f}")
+        print(f"{'modify logits (watermarking):':<30} {modify_logits_time:>10.2f}  |  {modify_logits_per_token:.4f}")
+        print(f"{'sampling:':<30} {sampling_time:>10.2f}  |  {sampling_per_token:.4f}")
+        print(f"{'total time:':<30} {total_duration:>10.2f}  |  {total_per_token:.4f}")
         print("----------------------\n")
-        
+
         return generated_text, stats
 
 
