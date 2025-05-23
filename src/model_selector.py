@@ -10,7 +10,6 @@ import argparse
 import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import json
 from typing import List, Dict, Any, Optional
 
 def load_hf_token():

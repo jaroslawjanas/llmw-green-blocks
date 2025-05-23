@@ -6,16 +6,12 @@ https://arxiv.org/abs/2301.10226
 This script implements the red-green token watermarking technique with greedy sampling.
 """
 
-import argparse
 import hashlib
 import random
-import os
 import torch
 import numpy as np
 import time
-import datetime
 from typing import List, Tuple, Dict, Optional, Union
-from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -23,18 +19,11 @@ from transformers import (
     PreTrainedTokenizer,
 )
 from tqdm import tqdm
-from model_formatters import format_prompt_for_model
-from utils import load_hf_token
+from src.model_formatters import format_prompt_for_model
+from src.utils import load_hf_token
+import src.paths as paths
 
-# Set the default cache and output directories
-CACHE_DIR = "./cache"
-MODELS_CACHE_DIR = os.path.join(CACHE_DIR, "models")
-DATASETS_CACHE_DIR = os.path.join(CACHE_DIR, "datasets")
-OUTPUT_DIR = "./output"
-os.makedirs(CACHE_DIR, exist_ok=True)
-os.makedirs(MODELS_CACHE_DIR, exist_ok=True)
-os.makedirs(DATASETS_CACHE_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+
 
 class LLMWatermarker:
     def __init__(
@@ -43,7 +32,7 @@ class LLMWatermarker:
         green_list_fraction: float = 0.5,
         bias: float = 6.0,
         seed: int = 4242,
-        cache_dir: str = CACHE_DIR,
+        cache_dir: str = paths.CACHE_DIR,
         device: Optional[str] = None,
         context_window: int = 1024,
         temperature: float = 0.0,
@@ -103,7 +92,7 @@ class LLMWatermarker:
         
         # Configure tokenizer options
         tokenizer_kwargs = {
-            "cache_dir": MODELS_CACHE_DIR,  # Use models subdirectory
+            "cache_dir": paths.MODELS_CACHE_DIR,  # Use models subdirectory
         }
         if token:
             # Use token instead of deprecated use_auth_token
@@ -117,7 +106,7 @@ class LLMWatermarker:
         
         # Configure model loading options
         model_kwargs = {
-            "cache_dir": MODELS_CACHE_DIR,  # Use models subdirectory
+            "cache_dir": paths.MODELS_CACHE_DIR,  # Use models subdirectory
         }
         if token:
             model_kwargs["token"] = token
@@ -436,178 +425,3 @@ class LLMWatermarker:
         print("----------------------\n")
 
         return generated_text, stats
-
-
-def get_random_essay(seed=None) -> str:
-    """
-    Get a random essay from the dataset.
-    
-    Args:
-        seed: Random seed for reproducibility
-        
-    Returns:
-        Random essay text
-    """
-    if seed is not None:
-        random.seed(seed)
-    
-    # Get HuggingFace token if available
-    token = load_hf_token()
-    
-    # Configure dataset loading options
-    dataset_kwargs = {
-        "cache_dir": DATASETS_CACHE_DIR  # Use datasets subdirectory
-    }
-    if token:
-        dataset_kwargs["token"] = token
-    
-    # Load the dataset
-    dataset = load_dataset("ChristophSchuhmann/essays-with-instructions", **dataset_kwargs)
-    
-    # Select a random essay
-    essay_idx = random.randint(0, len(dataset["train"]) - 1)
-    essay_data = dataset["train"][essay_idx]
-    
-    # Get essay text
-    essay_text = essay_data.get("essay", "")
-    if not essay_text:
-        # Fallback if "essay" field doesn't exist
-        text_fields = [v for k, v in essay_data.items() if isinstance(v, str) and len(v) > 100]
-        if text_fields:
-            essay_text = random.choice(text_fields)
-    
-    # Trim if too long
-    if len(essay_text) > 1000:
-        start_idx = random.randint(0, len(essay_text) - 1000)
-        essay_text = essay_text[start_idx:start_idx + 1000]
-    
-    return essay_text
-
-
-def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str, 
-                 seed: int, model_name: str, context_window: int, bias: float, 
-                 green_fraction: float, temperature: float, hash_window: int = 1):
-    """
-    Save the prompt, generated text and stats to a file.
-    
-    Args:
-        prompt: The input prompt
-        generated_text: The generated text
-        stats: Statistics about the watermarking
-        output_file: Path to the output file
-        seed: Random seed used for generation
-        model_name: Name of the model used for generation
-        context_window: Maximum context window size
-        bias: Bias value added to green tokens
-        green_fraction: Fraction of tokens in green list
-        temperature: Sampling temperature used for generation
-    """
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write("=== INPUT PROMPT ===\n")
-        f.write(prompt)
-        f.write("\n\n=== GENERATED TEXT ===\n")
-        f.write(generated_text)
-        f.write("\n\n=== WATERMARK STATISTICS ===\n")
-        f.write(f"Model: {model_name}\n")
-        f.write(f"Green tokens: {stats['green_tokens']}\n")
-        f.write(f"Red tokens: {stats['red_tokens']}\n")
-        f.write(f"Total tokens: {stats['total_tokens']}\n")
-        f.write(f"Green ratio: {stats['green_ratio']:.4f}\n")
-        f.write(f"Seed: {seed}\n")
-        f.write(f"Context window: {context_window}\n")
-        f.write(f"Bias: {bias}\n")
-        f.write(f"Green fraction: {green_fraction}\n")
-        f.write(f"Temperature: {temperature}\n")
-        f.write(f"Hash window: {hash_window}\n")
-
-def main():
-    parser = argparse.ArgumentParser(description="LLM Watermarking Implementation")
-    parser.add_argument("--model", type=str, default="facebook/opt-125m", help="Model to use")
-    parser.add_argument("--max-tokens", type=int, default=100, help="Maximum tokens to generate")
-    parser.add_argument("--green-fraction", type=float, default=0.5, help="Fraction of tokens in green list")
-    parser.add_argument("--bias", type=float, default=6.0, help="Bias to add to green tokens")
-    parser.add_argument("--seed", type=int, default=4242, help="Random seed")
-    parser.add_argument("--prompt", type=str, help="Custom prompt (uses random essay if not provided)")
-    parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
-    parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
-    parser.add_argument("--output", type=str, help="Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)")
-    parser.add_argument("--context-window", type=int, default=1024, help="Maximum number of tokens to use as context for generation (default: 1024)")
-    parser.add_argument("--temperature", "--temp", type=float, default=0.0, help="Sampling temperature (default: 0.0 = greedy sampling, higher = more random)")
-    parser.add_argument("--hash-window", type=int, default=1, help="Number of previous tokens to hash together (default: 1)")
-    
-    args = parser.parse_args()
-    
-    # Determine device
-    device = "cpu" if args.no_cuda else None
-    
-    # Initialize the watermarker
-    watermarker = LLMWatermarker(
-        model_name=args.model,
-        green_list_fraction=args.green_fraction,
-        bias=args.bias,
-        seed=args.seed,
-        cache_dir=args.cache_dir,
-        device=device,
-        context_window=args.context_window,
-        temperature=args.temperature,
-        hash_window=args.hash_window
-    )
-    
-    # Get prompt
-    if args.prompt:
-        prompt = args.prompt
-    else:
-        prompt = get_random_essay(seed=args.seed)
-        print("\n--- Random Essay Prompt ---")
-        print(prompt[:200] + "..." if len(prompt) > 200 else prompt)
-        print("---------------------------\n")
-    
-    # Generate text
-    print(f"Generating {args.max_tokens} tokens with watermarking...")
-    generated_text, stats = watermarker.generate_text(
-        prompt=prompt,
-        max_new_tokens=args.max_tokens
-    )
-    
-    # Print results
-    print("\n--- Generated Text ---")
-    print(generated_text)
-    print("---------------------\n")
-    
-    print("--- Watermark Statistics ---")
-    print(f"Model: {args.model}")
-    print(f"Green tokens: {stats['green_tokens']}")
-    print(f"Red tokens: {stats['red_tokens']}")
-    print(f"Total tokens: {stats['total_tokens']}")
-    print(f"Green ratio: {stats['green_ratio']:.4f}")
-    print(f"Seed: {args.seed}")
-    print(f"Context window: {args.context_window}")
-    print(f"Bias: {args.bias}")
-    print(f"Green fraction: {args.green_fraction}")
-    print(f"Temperature: {args.temperature}")
-    print(f"Hash window: {args.hash_window}")
-    print("---------------------------")
-    
-    # Save output to file if requested
-    if args.output:
-        output_path = os.path.join(OUTPUT_DIR, args.output)
-        # Save to file with all parameters
-        save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model,
-                    args.context_window, args.bias, args.green_fraction, args.temperature, 
-                    args.hash_window)
-        print(f"\nOutput saved to: {output_path}")
-    else:
-        # Generate a default filename based on timestamp
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        model_name = args.model.split("/")[-1]
-        output_file = f"{model_name}_gen_{timestamp}.txt"
-        output_path = os.path.join(OUTPUT_DIR, output_file)
-        # Stats for file output with all parameters
-        save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model,
-                    args.context_window, args.bias, args.green_fraction, args.temperature,
-                    args.hash_window)
-        print(f"\nOutput saved to: {output_path}")
-    
-
-if __name__ == "__main__":
-    main()
