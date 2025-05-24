@@ -64,9 +64,23 @@ def get_random_essay(seed=None, ) -> str:
     
     return essay_text
 
-def save_to_file(prompt: str, generated_text: str, stats: Dict, green_red_mask:List[int], output_file: str, 
-                 seed: int, model_name: str, context_window: int, bias: float, 
-                 green_fraction: float, temperature: float, hash_window: int = 1):
+def save_to_file(
+        prompt: str,
+        generated_text: str,
+        stats: Dict,
+        green_red_mask:List[int],
+        block_count: int,
+        output_file: str, 
+        seed: int,
+        model_name: str,
+        context_window: int,
+        bias: float,
+        green_fraction: float,
+        temperature: float,
+        block_size: int,
+        hash_window: int = 1
+    ):
+
     """
     Save the prompt, generated text and stats to a file.
     
@@ -91,13 +105,48 @@ def save_to_file(prompt: str, generated_text: str, stats: Dict, green_red_mask:L
         f.write(str(green_red_mask))
         f.write("\n\n=== WATERMARK STATISTICS ===\n")
         f.write(f"Model: {model_name}\n")
+        f.write(f"\n")
         f.write(f"Green tokens: {stats['green_tokens']}\n")
         f.write(f"Red tokens: {stats['red_tokens']}\n")
         f.write(f"Total tokens: {stats['total_tokens']}\n")
         f.write(f"Green ratio: {stats['green_ratio']:.4f}\n")
+        f.write(f"Block count: {block_count}\n")
+        f.write(f"\n")
         f.write(f"Seed: {seed}\n")
         f.write(f"Context window: {context_window}\n")
         f.write(f"Bias: {bias}\n")
         f.write(f"Green fraction: {green_fraction}\n")
         f.write(f"Temperature: {temperature}\n")
+        f.write(f"Block size: {block_size}\n")
         f.write(f"Hash window: {hash_window}\n")
+
+def count_green_blocks(mask: List[int], block_size: int) -> int:
+    """
+    Counts the number of intact green blocks (1s) in a mask (of 1s and 0s)
+
+    Args:
+        mask: A list of integers (0s and 1s) representing the green/red mask.
+        block_size: The required size of an intact block of 1s.
+
+    Returns:
+        The number of intact blocks of 1s found in the mask.
+    """
+    if not mask or block_size <= 0 or block_size > len(mask):
+        return 0
+
+    block_count = 0
+    green_in_row = 0
+
+    for color in mask:
+        if color == 1: # Green
+            green_in_row += 1
+        elif color == 0: # Red
+            green_in_row = 0
+        else:
+            raise ValueError("Mask must contain only 0s and 1s")
+
+        if green_in_row == block_size:
+            block_count += 1
+            green_in_row = 0 # Reset count after finding a block
+
+    return block_count

@@ -3,7 +3,7 @@ import datetime
 import argparse
 from src.llm_watermark import LLMWatermarker
 from src.utils import get_random_essay
-from src.utils import save_to_file
+from src.utils import save_to_file, count_green_blocks
 import src.paths as paths
 
 
@@ -18,10 +18,11 @@ def main():
     parser.add_argument("--cache-dir", type=str, default=paths.CACHE_DIR, help="Cache directory for models and datasets")
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
     parser.add_argument("--output", type=str, help="Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)")
-    parser.add_argument("--context-window", type=int, default=1024, help="Maximum number of tokens to use as context for generation (default: 1024)")
+    parser.add_argument("--context-window", type=int, default=1500, help="Maximum number of tokens to use as context for generation (default: 1500)")
     parser.add_argument("--temperature", "--temp", type=float, default=0.0, help="Sampling temperature (default: 0.0 = greedy sampling, higher = more random)")
     parser.add_argument("--hash-window", type=int, default=1, help="Number of previous tokens to hash together (default: 1)")
-    
+    parser.add_argument("--block-size", type=int, default=25, help="Size of a green block to consider as intact (default: 25)")
+
     args = parser.parse_args()
 
     # Set global cache
@@ -59,6 +60,9 @@ def main():
         prompt=prompt,
         max_new_tokens=args.max_tokens
     )
+
+    # Find the number of intact blocks
+    block_count = count_green_blocks(green_red_mask, args.block_size)
     
     # Print results
     print("\n--- Generated Text ---")
@@ -68,16 +72,18 @@ def main():
     print("---------------------\n")
     
     print("--- Watermark Statistics ---")
-    print(f"Model: {args.model}")
+    print(f"Model: {args.model}\n")
     print(f"Green tokens: {stats['green_tokens']}")
     print(f"Red tokens: {stats['red_tokens']}")
     print(f"Total tokens: {stats['total_tokens']}")
     print(f"Green ratio: {stats['green_ratio']:.4f}")
+    print(f"Block count: {block_count}\n")
     print(f"Seed: {args.seed}")
     print(f"Context window: {args.context_window}")
     print(f"Bias: {args.bias}")
     print(f"Green fraction: {args.green_fraction}")
     print(f"Temperature: {args.temperature}")
+    print(f"Block size: {args.block_size}")
     print(f"Hash window: {args.hash_window}")
     print("---------------------------")
     
@@ -96,6 +102,7 @@ def main():
         generated_text  = generated_text,
         stats           = stats,
         green_red_mask  = green_red_mask,
+        block_count     = block_count,
         output_file     = output_path,
         seed            = args.seed,
         model_name      = args.model,
@@ -103,6 +110,7 @@ def main():
         bias            = args.bias,
         green_fraction  = args.green_fraction,
         temperature     = args.temperature,
+        block_size      = args.block_size,
         hash_window     = args.hash_window
     )
     print(f"\nOutput saved to: {output_path}")
