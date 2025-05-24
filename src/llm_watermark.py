@@ -258,7 +258,7 @@ class LLMWatermarker:
         prompt: str, 
         max_new_tokens: int = 100, 
         verbose: bool = True
-    ) -> Tuple[str, Dict[str, int]]:
+    ) -> Tuple[str, Dict[str, int], List[int]]:
         """
         Generate text with watermarking.
         
@@ -268,7 +268,7 @@ class LLMWatermarker:
             verbose: Whether to show progress bar
             
         Returns:
-            Tuple of (generated_text, statistics)
+            Tuple of (generated_text, statistics, green_red_mask)
         """
         # Record start time for total duration
         total_start_time = time.time()
@@ -276,6 +276,9 @@ class LLMWatermarker:
         # Reset counters
         self.green_tokens_selected = 0
         self.red_tokens_selected = 0
+
+        # Initialize mask for green/red tokens
+        green_red_mask = []
 
         # Initialize timing variables
         prompt_formatting_duration = 0.0
@@ -367,8 +370,10 @@ class LLMWatermarker:
                 # Update statistics counters based on whether the selected token was green or red
                 if is_green:
                     self.green_tokens_selected += 1  # Token was from the green list (biased)
+                    green_red_mask.append(1)
                 else:
                     self.red_tokens_selected += 1    # Token was from the red list (unbiased)
+                    green_red_mask.append(0)
             
             # Update progress bar with stats
             green_ratio = self.green_tokens_selected / (self.green_tokens_selected + self.red_tokens_selected + 1e-10)
@@ -424,4 +429,4 @@ class LLMWatermarker:
         print(f"{'total time:':<30} {total_duration:>10.2f}  |  {total_per_token:.4f}")
         print("----------------------\n")
 
-        return generated_text, stats
+        return generated_text, stats, green_red_mask

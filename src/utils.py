@@ -5,7 +5,7 @@ Utility functions for LLM Watermarking.
 
 import os
 import random
-from typing import Dict
+from typing import Dict, List
 from datasets import load_dataset
 import src.paths as paths
 
@@ -64,7 +64,7 @@ def get_random_essay(seed=None, ) -> str:
     
     return essay_text
 
-def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str, 
+def save_to_file(prompt: str, generated_text: str, stats: Dict, green_red_mask:List[int], output_file: str, 
                  seed: int, model_name: str, context_window: int, bias: float, 
                  green_fraction: float, temperature: float, hash_window: int = 1):
     """
@@ -87,6 +87,8 @@ def save_to_file(prompt: str, generated_text: str, stats: Dict, output_file: str
         f.write(prompt)
         f.write("\n\n=== GENERATED TEXT ===\n")
         f.write(generated_text)
+        f.write("\n\n=== GREEN/RED MASK ===\n")
+        f.write(str(green_red_mask))
         f.write("\n\n=== WATERMARK STATISTICS ===\n")
         f.write(f"Model: {model_name}\n")
         f.write(f"Green tokens: {stats['green_tokens']}\n")

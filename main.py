@@ -55,7 +55,7 @@ def main():
     
     # Generate text
     print(f"Generating {args.max_tokens} tokens with watermarking...")
-    generated_text, stats = watermarker.generate_text(
+    generated_text, stats, green_red_mask = watermarker.generate_text(
         prompt=prompt,
         max_new_tokens=args.max_tokens
     )
@@ -63,6 +63,8 @@ def main():
     # Print results
     print("\n--- Generated Text ---")
     print(generated_text)
+    print("\n--- Green/Red Mask ---")
+    print(green_red_mask)
     print("---------------------\n")
     
     print("--- Watermark Statistics ---")
@@ -79,26 +81,32 @@ def main():
     print(f"Hash window: {args.hash_window}")
     print("---------------------------")
     
-    # Save output to file if requested
+    # Save output under specific filename
     if args.output:
         output_path = os.path.join(paths.OUTPUT_DIR, args.output)
-        # Save to file with all parameters
-        save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model,
-                    args.context_window, args.bias, args.green_fraction, args.temperature, 
-                    args.hash_window)
-        print(f"\nOutput saved to: {output_path}")
     else:
         # Generate a default filename based on timestamp
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         model_name = args.model.split("/")[-1]
         output_file = f"{model_name}_gen_{timestamp}.txt"
         output_path = os.path.join(paths.OUTPUT_DIR, output_file)
-        # Stats for file output with all parameters
-        save_to_file(prompt, generated_text, stats, output_path, args.seed, args.model,
-                    args.context_window, args.bias, args.green_fraction, args.temperature,
-                    args.hash_window)
-        print(f"\nOutput saved to: {output_path}")
-    
+
+    save_to_file(
+        prompt          = prompt,
+        generated_text  = generated_text,
+        stats           = stats,
+        green_red_mask  = green_red_mask,
+        output_file     = output_path,
+        seed            = args.seed,
+        model_name      = args.model,
+        context_window  = args.context_window,
+        bias            = args.bias,
+        green_fraction  = args.green_fraction,
+        temperature     = args.temperature,
+        hash_window     = args.hash_window
+    )
+    print(f"\nOutput saved to: {output_path}")
+
 
 if __name__ == "__main__":
     main()
