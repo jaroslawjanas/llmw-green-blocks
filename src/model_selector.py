@@ -323,8 +323,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="LLM Model Selector")
     parser.add_argument("--list", action="store_true", help="List all recommended models")
     parser.add_argument("--filter", type=str, help="Filter models by tag (e.g., small, medium, large)")
-    parser.add_argument("--download", type=str, help="Download a model from the recommended list")
-    parser.add_argument("--download-custom", type=str, help="Download any model by specifying its full name (e.g., 'organization/model-name')")
+    parser.add_argument("--download", type=str, help="Download a model. Can be a model from the recommended list or any model by specifying its full name (e.g., 'organization/model-name')")
     parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
     
     args = parser.parse_args(argv)
@@ -360,12 +359,9 @@ def main(argv=None):
             print()
     
     elif args.download:
-        download_model(args.download, args.cache_dir)
-    
-    elif args.download_custom:
-        print(f"Attempting to download custom model: {args.download_custom}")
+        print(f"Attempting to download model: {args.download}")
         try:
-            download_model(args.download_custom, args.cache_dir)
+            download_model(args.download, args.cache_dir)
         except Exception as e:
             print(f"Error downloading model: {e}")
             print("Please check the model name and ensure you have the correct permissions.")

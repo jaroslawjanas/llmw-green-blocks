@@ -75,8 +75,10 @@ python main.py --model-selector --list
 # Filter by tag (small, medium, large)
 python main.py --model-selector --list --filter medium
 
-# Download a specific model
+# Download a model (from recommended list or any custom model by name)
 python main.py --model-selector --download facebook/opt-1.3b
+# Or download a custom model not in the recommended list
+python main.py --model-selector --download organization/custom-model-name
 ```
 
 ### Running the Watermarker
