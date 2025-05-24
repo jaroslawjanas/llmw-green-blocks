@@ -11,6 +11,7 @@ import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from typing import List, Dict, Any, Optional
+import src.paths as paths
 
 def load_hf_token():
     """Load HuggingFace token from hf_token file."""
@@ -20,12 +21,6 @@ def load_hf_token():
         with open(token_path, "r") as f:
             token = f.read().strip()
     return token
-
-# Define the cache directory
-CACHE_DIR = "./cache"
-MODELS_CACHE_DIR = os.path.join(CACHE_DIR, "models")
-os.makedirs(CACHE_DIR, exist_ok=True)
-os.makedirs(MODELS_CACHE_DIR, exist_ok=True)
 
 # Recommended models with VRAM requirements
 RECOMMENDED_MODELS = [
@@ -237,13 +232,12 @@ def filter_models_by_tag(models: List[Dict[str, Any]], tag: str) -> List[Dict[st
     """
     return [model for model in models if tag in model["tags"]]
 
-def download_model(model_name: str, cache_dir: str = CACHE_DIR):
+def download_model(model_name: str):
     """
     Download model and tokenizer to cache.
     
     Args:
         model_name: HuggingFace model name
-        cache_dir: Directory to cache the model
     """
     print(f"Downloading model: {model_name}")
     
@@ -252,7 +246,7 @@ def download_model(model_name: str, cache_dir: str = CACHE_DIR):
     
     # Configure tokenizer options
     tokenizer_kwargs = {
-        "cache_dir": MODELS_CACHE_DIR,
+        "cache_dir": paths.MODELS_CACHE_DIR,
     }
     if token:
         tokenizer_kwargs["token"] = token
@@ -266,7 +260,7 @@ def download_model(model_name: str, cache_dir: str = CACHE_DIR):
     
     # Configure model loading options
     model_kwargs = {
-        "cache_dir": MODELS_CACHE_DIR,
+        "cache_dir": paths.MODELS_CACHE_DIR,
     }
     if token:
         model_kwargs["token"] = token
@@ -288,25 +282,22 @@ def download_model(model_name: str, cache_dir: str = CACHE_DIR):
             **model_kwargs
         )
     
-    print(f"Model and tokenizer successfully downloaded to {MODELS_CACHE_DIR}")
+    print(f"Model and tokenizer successfully downloaded to {paths.MODELS_CACHE_DIR}")
 
-def list_downloaded_models(cache_dir: str = MODELS_CACHE_DIR) -> List[str]:
+def list_downloaded_models() -> List[str]:
     """
     List models that have already been downloaded.
     
-    Args:
-        cache_dir: Cache directory for models
-        
     Returns:
         List of downloaded model names
     """
-    if not os.path.exists(cache_dir):
+    if not os.path.exists(paths.MODELS_CACHE_DIR):
         return []
     
     # Look for model directories with the pattern "models--org--name"
     models = []
-    for item in os.listdir(cache_dir):
-        item_path = os.path.join(cache_dir, item)
+    for item in os.listdir(paths.MODELS_CACHE_DIR):
+        item_path = os.path.join(paths.MODELS_CACHE_DIR, item)
         if os.path.isdir(item_path) and item.startswith("models--"):
             # Extract org/model from directory name (e.g., "models--facebook--opt-125m" -> "facebook/opt-125m")
             parts = item.split("--")
@@ -324,9 +315,12 @@ def main(argv=None):
     parser.add_argument("--list", action="store_true", help="List all recommended models")
     parser.add_argument("--filter", type=str, help="Filter models by tag (e.g., small, medium, large)")
     parser.add_argument("--download", type=str, help="Download a model. Can be a model from the recommended list or any model by specifying its full name (e.g., 'organization/model-name')")
-    parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
+    parser.add_argument("--cache-dir", type=str, default=paths.CACHE_DIR, help="Cache directory for models")
     
     args = parser.parse_args(argv)
+
+    paths.set_cache_dir(args.cache_dir)
+    paths.ensure_directories()
     
     # Check available GPU resources
     num_gpus, min_gpu_vram, total_vram = get_gpu_info()
@@ -361,7 +355,7 @@ def main(argv=None):
     elif args.download:
         print(f"Attempting to download model: {args.download}")
         try:
-            download_model(args.download, args.cache_dir)
+            download_model(args.download)
         except Exception as e:
             print(f"Error downloading model: {e}")
             print("Please check the model name and ensure you have the correct permissions.")
@@ -375,7 +369,7 @@ def main(argv=None):
             print(f"{i}. {model['name']} - {model['description']}")
         
         print("\nAlready downloaded models:")
-        downloaded = list_downloaded_models(MODELS_CACHE_DIR)
+        downloaded = list_downloaded_models()
         if downloaded:
             for i, model in enumerate(downloaded, 1):
                 print(f"{i}. {model}")
@@ -406,7 +400,7 @@ def main(argv=None):
                 
             model_idx = int(input("\nEnter model number: ")) - 1
             if 0 <= model_idx < len(compatible_models):
-                download_model(compatible_models[model_idx]["name"], args.cache_dir)
+                download_model(compatible_models[model_idx]["name"])
             else:
                 print("Invalid model number.")
                 
@@ -416,7 +410,7 @@ def main(argv=None):
             if custom_model:
                 print(f"\nAttempting to download model: {custom_model}")
                 try:
-                    download_model(custom_model, args.cache_dir)
+                    download_model(custom_model)
                 except Exception as e:
                     print(f"Error downloading model: {e}")
                     print("Please check the model name and ensure you have the correct permissions.")
