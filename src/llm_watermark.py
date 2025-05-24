@@ -107,6 +107,7 @@ class LLMWatermarker:
         # Configure model loading options
         model_kwargs = {
             "cache_dir": paths.MODELS_CACHE_DIR,  # Use models subdirectory
+            "use_cache": True,  # Ensure K/V caching is enabled
         }
         if token:
             model_kwargs["token"] = token
@@ -130,6 +131,43 @@ class LLMWatermarker:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             
+    def _trim_past_key_values(self, past_key_values: Tuple, trim_amount: int) -> Tuple:
+        """
+        Trim the K/V cache by removing the oldest entries.
+        
+        This method is essential for K/V caching because:
+        1. Memory Management: K/V caches grow linearly with sequence length, potentially causing OOM errors
+        2. Context Window Limits: Models have maximum context windows (e.g., 2048, 4096 tokens)
+        3. Performance: Without trimming, the cache would grow indefinitely during long text generation
+        4. Correctness: Prevents exceeding model's positional encoding limits
+        
+        The method removes the oldest tokens from the beginning of the cache while preserving
+        the most recent context, which is typically most relevant for generation.
+        
+        Args:
+            past_key_values: Tuple of past key values from the model
+            trim_amount: Number of positions to remove from the beginning
+            
+        Returns:
+            Trimmed past_key_values tuple
+        """
+        trimmed_past = []
+        
+        # Iterate through each layer's key-value pairs
+        for layer_past in past_key_values:
+            # Each layer_past is a tuple of (key, value) tensors
+            # Shape: (batch_size, num_heads, sequence_length, head_dim)
+            key, value = layer_past
+            
+            # Trim the sequence dimension (dimension 2) by removing oldest tokens
+            trimmed_key = key[:, :, trim_amount:, :]
+            trimmed_value = value[:, :, trim_amount:, :]
+            
+            # Append the trimmed tuple for this layer
+            trimmed_past.append((trimmed_key, trimmed_value))
+        
+        return tuple(trimmed_past)
+        
     def _get_red_green_tokens(self, token_ids: List[int]) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Generate red and green token lists based on the hash of previous tokens.
@@ -302,22 +340,47 @@ class LLMWatermarker:
         # Store generated ids
         generated_ids = input_ids.clone()[0].tolist()
         
+        # Initialize K/V cache
+        past_key_values = None
+        cache_position = 0  # Track position in the cache
+        
         # Setup progress tracking
         progress_bar = tqdm(range(max_new_tokens), disable=not verbose)
         
         # Generate tokens one by one
-        for _ in progress_bar:
-            # Only use the last context_window tokens if needed (to save memory and time)
-            if len(generated_ids) > self.context_window:
-                input_ids = torch.tensor([generated_ids[-self.context_window:]], device=self.device)
+        for i in progress_bar:
+            # Prepare input for the model
+            if past_key_values is None:
+                # First generation - use the full prompt
+                # Only use the last context_window tokens if needed
+                if len(generated_ids) > self.context_window:
+                    model_input_ids = torch.tensor([generated_ids[-self.context_window:]], device=self.device)
+                    cache_position = 0  # Reset cache position if we truncate
+                else:
+                    model_input_ids = torch.tensor([generated_ids], device=self.device)
             else:
-                input_ids = torch.tensor([generated_ids], device=self.device)
+                # Subsequent generations - only use the last generated token
+                model_input_ids = torch.tensor([[generated_ids[-1]]], device=self.device)
+                
+                # Check if we need to trim the cache due to context window limits
+                if cache_position >= self.context_window:
+                    # Trim the K/V cache to stay within context window
+                    # Keep only the most recent tokens
+                    trim_amount = cache_position - self.context_window + 1
+                    past_key_values = self._trim_past_key_values(past_key_values, trim_amount)
+                    cache_position = self.context_window - 1
             
-            # Get logits from the model
+            # Get logits from the model with K/V caching
             start_time = time.time()
             with torch.no_grad():
-                outputs = self.model(input_ids)
+                outputs = self.model(
+                    model_input_ids, 
+                    past_key_values=past_key_values,
+                    use_cache=True  # Enable K/V caching
+                )
                 logits = outputs.logits[:, -1:, :]  # Get logits of last token
+                past_key_values = outputs.past_key_values  # Update cache
+                cache_position += model_input_ids.shape[1]  # Update position
             end_time = time.time()
             logits_generation_time += end_time - start_time
             
