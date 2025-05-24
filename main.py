@@ -28,9 +28,12 @@ def main():
     args, remaining_argv = parser.parse_known_args()
 
     if args.model_selector:
-        # Pass the remaining arguments to the model_selector's main function
+        # Pass the remaining arguments and the cache-dir to the model_selector's main function
         # This allows model_selector to parse its own arguments (e.g., --list, --download)
-        src.model_selector.main(remaining_argv)
+        model_selector_args = remaining_argv
+        if args.cache_dir:
+            model_selector_args.extend(["--cache-dir", args.cache_dir])
+        src.model_selector.main(model_selector_args)
         return
 
     # Set global cache
