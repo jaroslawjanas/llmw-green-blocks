@@ -54,28 +54,29 @@ This technique increases the likelihood of selecting tokens from the green list,
 
 ### Selecting a Model
 
-Use the model selector to choose an appropriate model for your hardware:
+Use the model selector to choose an appropriate model for your hardware. Running it without arguments launches an interactive tool:
 
 ```bash
-python model_selector.py
+python main.py --model-selector
 ```
 
 This interactive tool will:
 - Check your available VRAM
 - Recommend compatible models
 - Allow you to download models
+- Provide options to list all compatible models, download a model from the list, or download a custom model by name.
 
 Alternatively, use command-line options:
 
 ```bash
 # List all compatible models
-python model_selector.py --list
+python main.py --model-selector --list
 
 # Filter by tag (small, medium, large)
-python model_selector.py --list --filter medium
+python main.py --model-selector --list --filter medium
 
 # Download a specific model
-python model_selector.py --download facebook/opt-1.3b
+python main.py --model-selector --download facebook/opt-1.3b
 ```
 
 ### Running the Watermarker
@@ -88,9 +89,9 @@ python llm_watermark.py
 
 This will:
 1. Use the default model (or facebook/opt-125m if none set)
-2. Choose a random essay from the [essays-with-instructions](https://huggingface.co/datasets/ChristophSchuhmann/essays-with-instructions) dataset
+2. Choose a random essay from the [essays-with-instructions](https://huggingface.co/datasets/ChristophSchuhmann/essags-with-instructions) dataset
 3. Generate 100 tokens with watermarking
-4. Show statistics about green vs. red token selection
+4. Show statistics about green vs. red token selection, including a detailed timing summary
 
 Advanced options:
 
@@ -110,9 +111,10 @@ All options:
 --cache-dir CACHE_DIR   Cache directory for models (optional)
 --no-cuda               Disable CUDA even if available
 --output OUTPUT         Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)
---context-window CONTEXT_WINDOW   Maximum number of tokens to use as context for generation (default: 1024)
+--context-window CONTEXT_WINDOW   Maximum number of tokens to use as context for generation (default: 1500)
 --temperature, --temp TEMPERATURE Sampling temperature (default: 0.0 = greedy sampling, higher = more random)
 --hash-window HASH_WINDOW         Number of previous tokens to hash together (default: 1)
+--block-size BLOCK_SIZE           Size of a green block to consider as intact (default: 25)
 ```
 
 Note: All watermarking results are automatically saved to the `output/` directory. If you don't specify a filename with `--output`, a filename will be automatically generated based on the model name and a timestamp (format: `modelname_gen_YYYYMMDD_HHMMSS.txt`). This ensures that multiple runs don't overwrite each other.
@@ -133,11 +135,13 @@ Green tokens: 42
 Red tokens: 8
 Total tokens: 50
 Green ratio: 0.8400
+Block count: 1
 Seed: 4242
-Context window: 1024
+Context window: 1500
 Bias: 6.0
 Green fraction: 0.5
 Temperature: 0.0
+Block size: 25
 Hash window: 1
 ---------------------------
 ```
@@ -177,6 +181,10 @@ Some models (such as Gemma, Llama, and certain Mistral models) require you to ac
 If you encounter errors like "403 Client Error: Forbidden" when downloading a model, it typically means you need to accept the model's license agreement first.
 
 ## How It Works
+
+### Prompt Formatting
+
+The system automatically formats prompts to match the specific requirements of different models, ensuring compatibility and optimal performance.
 
 The watermarking algorithm:
 

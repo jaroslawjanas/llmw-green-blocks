@@ -5,10 +5,12 @@ from src.llm_watermark import LLMWatermarker
 from src.utils import get_random_essay
 from src.utils import save_to_file, count_green_blocks
 import src.paths as paths
+import src.model_selector
 
 
 def main():
     parser = argparse.ArgumentParser(description="LLM Watermarking Implementation")
+    parser.add_argument("--model-selector", action="store_true", help="Launch the model selector UI")
     parser.add_argument("--model", type=str, default="facebook/opt-125m", help="Model to use")
     parser.add_argument("--max-tokens", type=int, default=100, help="Maximum tokens to generate")
     parser.add_argument("--green-fraction", type=float, default=0.5, help="Fraction of tokens in green list")
@@ -23,7 +25,13 @@ def main():
     parser.add_argument("--hash-window", type=int, default=1, help="Number of previous tokens to hash together (default: 1)")
     parser.add_argument("--block-size", type=int, default=25, help="Size of a green block to consider as intact (default: 25)")
 
-    args = parser.parse_args()
+    args, remaining_argv = parser.parse_known_args()
+
+    if args.model_selector:
+        # Pass the remaining arguments to the model_selector's main function
+        # This allows model_selector to parse its own arguments (e.g., --list, --download)
+        src.model_selector.main(remaining_argv)
+        return
 
     # Set global cache
     paths.set_cache_dir(args.cache_dir)

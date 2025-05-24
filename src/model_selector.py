@@ -319,7 +319,7 @@ def list_downloaded_models(cache_dir: str = MODELS_CACHE_DIR) -> List[str]:
 
 # Configuration functionality removed as requested
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description="LLM Model Selector")
     parser.add_argument("--list", action="store_true", help="List all recommended models")
     parser.add_argument("--filter", type=str, help="Filter models by tag (e.g., small, medium, large)")
@@ -327,7 +327,7 @@ def main():
     parser.add_argument("--download-custom", type=str, help="Download any model by specifying its full name (e.g., 'organization/model-name')")
     parser.add_argument("--cache-dir", type=str, default=CACHE_DIR, help="Cache directory for models")
     
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     
     # Check available GPU resources
     num_gpus, min_gpu_vram, total_vram = get_gpu_info()
