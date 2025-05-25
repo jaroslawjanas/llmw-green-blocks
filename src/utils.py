@@ -50,7 +50,7 @@ def get_random_essay(seed=None, ) -> str:
     essay_data = dataset["train"][essay_idx]
     
     # Get essay text
-    essay_text = essay_data.get("essay", "")
+    essay_text = essay_data.get("instructions", "")
     if not essay_text:
         raise ValueError("No text found in dataset entry")
     
