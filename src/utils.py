@@ -52,15 +52,7 @@ def get_random_essay(seed=None, ) -> str:
     # Get essay text
     essay_text = essay_data.get("essay", "")
     if not essay_text:
-        # Fallback if "essay" field doesn't exist
-        text_fields = [v for k, v in essay_data.items() if isinstance(v, str) and len(v) > 100]
-        if text_fields:
-            essay_text = random.choice(text_fields)
-    
-    # Trim if too long
-    if len(essay_text) > 1000:
-        start_idx = random.randint(0, len(essay_text) - 1000)
-        essay_text = essay_text[start_idx:start_idx + 1000]
+        raise ValueError("No text found in dataset entry")
     
     return essay_text
 
