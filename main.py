@@ -2,7 +2,7 @@ import os
 import datetime
 import argparse
 from src.llm_watermark import LLMWatermarker
-from src.utils import get_random_essay
+from src.utils import get_shuffled_essays
 from src.utils import save_to_file, count_green_blocks
 import src.paths as paths
 import src.model_selector
@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--temperature", "--temp", type=float, default=0.0, help="Sampling temperature (default: 0.0 = greedy sampling, higher = more random)")
     parser.add_argument("--hash-window", type=int, default=1, help="Number of previous tokens to hash together (default: 1)")
     parser.add_argument("--block-size", type=int, nargs='+', default=[25], help="Size(s) of a green block to consider as intact (default: 25)")
+    parser.add_argument("--n-prompts", type=int, default=1, help="Number of prompts to process (default: 1)")
 
     args, remaining_argv = parser.parse_known_args()
 
@@ -44,6 +45,7 @@ def main():
     device = "cpu" if args.no_cuda else None
     
     # Initialize the watermarker
+    print(f"Loading model: {args.model}")
     watermarker = LLMWatermarker(
         model_name=args.model,
         green_list_fraction=args.green_fraction,
@@ -56,74 +58,118 @@ def main():
         hash_window=args.hash_window
     )
     
-    # Get prompt
+    # Get prompts
     if args.prompt:
-        prompt = args.prompt
-    else:
-        prompt = get_random_essay(seed=args.seed)
-        print("\n--- Random Essay Prompt ---")
-        print(prompt[:200] + "..." if len(prompt) > 200 else prompt)
+        # Single custom prompt
+        prompts = [args.prompt]
+        print(f"\n--- Using Custom Prompt ---")
+        print(args.prompt[:200] + "..." if len(args.prompt) > 200 else args.prompt)
         print("---------------------------\n")
-    
-    # Generate text
-    print(f"Generating {args.max_tokens} tokens with watermarking...")
-    generated_text, stats, green_red_mask = watermarker.generate_text(
-        prompt=prompt,
-        max_new_tokens=args.max_tokens
-    )
-
-    # Find the number of intact blocks for each block size
-    block_counts = count_green_blocks(green_red_mask, args.block_size)
-    
-    # Print results
-    print("\n--- Generated Text ---")
-    print(generated_text)
-    print("\n--- Green/Red Mask ---")
-    print(green_red_mask)
-    print("---------------------\n")
-    
-    print("--- Watermark Statistics ---")
-    print(f"Model: {args.model}\n")
-    print(f"Green tokens: {stats['green_tokens']}")
-    print(f"Red tokens: {stats['red_tokens']}")
-    print(f"Total tokens: {stats['total_tokens']}")
-    print(f"Green ratio: {stats['green_ratio']:.4f}")
-    for b_size, b_count in block_counts:
-        print(f"Block count (size {b_size}): {b_count}")
-    print(f"\nSeed: {args.seed}")
-    print(f"Context window: {args.context_window}")
-    print(f"Bias: {args.bias}")
-    print(f"Green fraction: {args.green_fraction}")
-    print(f"Temperature: {args.temperature}")
-    print(f"Hash window: {args.hash_window}")
-    print("---------------------------")
-    
-    # Save output under specific filename
-    if args.output:
-        output_path = os.path.join(paths.OUTPUT_DIR, args.output)
     else:
-        # Generate a default filename based on timestamp
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        model_name = args.model.split("/")[-1]
-        output_file = f"{model_name}_gen_{timestamp}.txt"
-        output_path = os.path.join(paths.OUTPUT_DIR, output_file)
+        # Get shuffled essays from dataset
+        prompts = get_shuffled_essays(seed=args.seed, n_prompts=args.n_prompts)
+        if args.n_prompts == 1:
+            print("\n--- Random Essay Prompt ---")
+            print(prompts[0][:200] + "..." if len(prompts[0]) > 200 else prompts[0])
+            print("---------------------------\n")
+        else:
+            print(f"\n--- Processing {args.n_prompts} Shuffled Essays ---")
+            print(f"First prompt preview: {prompts[0][:100] + '...' if len(prompts[0]) > 100 else prompts[0]}")
+            print("---------------------------\n")
+    
+    # Process each prompt
+    total_prompts = len(prompts)
+    model_name = args.model.split("/")[-1]
+    
+    print(f"Generating {args.max_tokens} tokens per prompt with watermarking...")
+    print(f"Processing {total_prompts} prompt(s) with model: {args.model}\n")
+    
+    output_paths = []
+    
+    for prompt_idx, prompt in enumerate(prompts, 1):
+        if total_prompts > 1:
+            print(f"\n{'='*60}")
+            print(f"Processing Prompt {prompt_idx}/{total_prompts}")
+            print(f"{'='*60}")
+            print(f"Prompt preview: {prompt[:100] + '...' if len(prompt) > 100 else prompt}")
+            print()
+        
+        # Generate text for this prompt
+        generated_text, stats, green_red_mask = watermarker.generate_text(
+            prompt=prompt,
+            max_new_tokens=args.max_tokens
+        )
 
-    save_to_file(
-        prompt          = prompt,
-        generated_text  = generated_text,
-        stats           = stats,
-        green_red_mask  = green_red_mask,
-        block_counts    = block_counts, # Pass the list of results
-        output_file     = output_path,
-        seed            = args.seed,
-        model_name      = args.model,
-        context_window  = args.context_window,
-        bias            = args.bias,
-        green_fraction  = args.green_fraction,
-        temperature     = args.temperature,
-        hash_window     = args.hash_window
-    )
-    print(f"\nOutput saved to: {output_path}")
+        # Find the number of intact blocks for each block size
+        block_counts = count_green_blocks(green_red_mask, args.block_size)
+        
+        # Print results for this prompt
+        print("\n--- Generated Text ---")
+        print(generated_text)
+        print("\n--- Green/Red Mask ---")
+        print(green_red_mask)
+        print("---------------------\n")
+        
+        print("--- Watermark Statistics ---")
+        print(f"Model: {args.model}\n")
+        print(f"Green tokens: {stats['green_tokens']}")
+        print(f"Red tokens: {stats['red_tokens']}")
+        print(f"Total tokens: {stats['total_tokens']}")
+        print(f"Green ratio: {stats['green_ratio']:.4f}")
+        for b_size, b_count in block_counts:
+            print(f"Block count (size {b_size}): {b_count}")
+        print(f"\nSeed: {args.seed}")
+        print(f"Context window: {args.context_window}")
+        print(f"Bias: {args.bias}")
+        print(f"Green fraction: {args.green_fraction}")
+        print(f"Temperature: {args.temperature}")
+        print(f"Hash window: {args.hash_window}")
+        print("---------------------------")
+        
+        # Generate output filename
+        if args.output and total_prompts == 1:
+            # Single prompt with custom output name
+            output_path = os.path.join(paths.OUTPUT_DIR, args.output)
+        else:
+            # Generate filename with prompt index
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            if total_prompts == 1:
+                output_file = f"{model_name}_gen_{timestamp}.txt"
+            else:
+                output_file = f"{model_name}_prompt_{prompt_idx:03d}_gen_{timestamp}.txt"
+            output_path = os.path.join(paths.OUTPUT_DIR, output_file)
+
+        # Save output for this prompt
+        save_to_file(
+            prompt          = prompt,
+            generated_text  = generated_text,
+            stats           = stats,
+            green_red_mask  = green_red_mask,
+            block_counts    = block_counts,
+            output_file     = output_path,
+            seed            = args.seed,
+            model_name      = args.model,
+            context_window  = args.context_window,
+            bias            = args.bias,
+            green_fraction  = args.green_fraction,
+            temperature     = args.temperature,
+            hash_window     = args.hash_window
+        )
+        
+        output_paths.append(output_path)
+        print(f"\nOutput saved to: {output_path}")
+    
+    # Final summary
+    if total_prompts > 1:
+        print(f"\n{'='*60}")
+        print(f"BATCH PROCESSING COMPLETE")
+        print(f"{'='*60}")
+        print(f"Processed {total_prompts} prompt(s) successfully")
+        print(f"Model: {args.model}")
+        print(f"Output files:")
+        for i, output_path in enumerate(output_paths, 1):
+            print(f"  {i}. {output_path}")
+        print(f"{'='*60}")
 
 
 if __name__ == "__main__":

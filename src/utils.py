@@ -19,18 +19,19 @@ def load_hf_token():
             token = f.read().strip()
     return token
 
-def get_random_essay(seed=None, ) -> str:
+def get_shuffled_essays(seed: int, n_prompts: int) -> List[str]:
     """
-    Get a random essay from the dataset.
+    Get a shuffled list of essays from the dataset.
     
     Args:
         seed: Random seed for reproducibility
+        n_prompts: Number of prompts to return
         
     Returns:
-        Random essay text
+        List of essay texts (shuffled deterministically based on seed)
     """
-    if seed is not None:
-        random.seed(seed)
+    # Set random seed for reproducible shuffling
+    random.seed(seed)
     
     # Get HuggingFace token if available
     token = load_hf_token()
@@ -45,16 +46,30 @@ def get_random_essay(seed=None, ) -> str:
     # Load the dataset
     dataset = load_dataset("ChristophSchuhmann/essays-with-instructions", **dataset_kwargs)
     
-    # Select a random essay
-    essay_idx = random.randint(0, len(dataset["train"]) - 1)
-    essay_data = dataset["train"][essay_idx]
+    # Get all essay indices
+    total_essays = len(dataset["train"])
     
-    # Get essay text
-    essay_text = essay_data.get("instructions", "")
-    if not essay_text:
-        raise ValueError("No text found in dataset entry")
+    # Check if we have enough essays
+    if n_prompts > total_essays:
+        raise ValueError(f"Requested {n_prompts} prompts but dataset only contains {total_essays} essays")
     
-    return essay_text
+    # Create a list of indices and shuffle them
+    essay_indices = list(range(total_essays))
+    random.shuffle(essay_indices)
+    
+    # Get the first n_prompts indices
+    selected_indices = essay_indices[:n_prompts]
+    
+    # Extract the essays
+    essays = []
+    for idx in selected_indices:
+        essay_data = dataset["train"][idx]
+        essay_text = essay_data.get("instructions", "")
+        if not essay_text:
+            raise ValueError(f"No text found in dataset entry at index {idx}")
+        essays.append(essay_text)
+    
+    return essays
 
 def save_to_file(
         prompt: str,
