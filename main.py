@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--context-window", type=int, default=1500, help="Maximum number of tokens to use as context for generation (default: 1500)")
     parser.add_argument("--temperature", "--temp", type=float, default=0.0, help="Sampling temperature (default: 0.0 = greedy sampling, higher = more random)")
     parser.add_argument("--hash-window", type=int, default=1, help="Number of previous tokens to hash together (default: 1)")
-    parser.add_argument("--block-size", type=int, default=25, help="Size of a green block to consider as intact (default: 25)")
+    parser.add_argument("--block-size", type=int, nargs='+', default=[25], help="Size(s) of a green block to consider as intact (default: 25)")
 
     args, remaining_argv = parser.parse_known_args()
 
@@ -72,8 +72,8 @@ def main():
         max_new_tokens=args.max_tokens
     )
 
-    # Find the number of intact blocks
-    block_count = count_green_blocks(green_red_mask, args.block_size)
+    # Find the number of intact blocks for each block size
+    block_counts = count_green_blocks(green_red_mask, args.block_size)
     
     # Print results
     print("\n--- Generated Text ---")
@@ -88,13 +88,13 @@ def main():
     print(f"Red tokens: {stats['red_tokens']}")
     print(f"Total tokens: {stats['total_tokens']}")
     print(f"Green ratio: {stats['green_ratio']:.4f}")
-    print(f"Block count: {block_count}\n")
-    print(f"Seed: {args.seed}")
+    for b_size, b_count in block_counts:
+        print(f"Block count (size {b_size}): {b_count}")
+    print(f"\nSeed: {args.seed}")
     print(f"Context window: {args.context_window}")
     print(f"Bias: {args.bias}")
     print(f"Green fraction: {args.green_fraction}")
     print(f"Temperature: {args.temperature}")
-    print(f"Block size: {args.block_size}")
     print(f"Hash window: {args.hash_window}")
     print("---------------------------")
     
@@ -113,7 +113,7 @@ def main():
         generated_text  = generated_text,
         stats           = stats,
         green_red_mask  = green_red_mask,
-        block_count     = block_count,
+        block_counts    = block_counts, # Pass the list of results
         output_file     = output_path,
         seed            = args.seed,
         model_name      = args.model,
@@ -121,7 +121,6 @@ def main():
         bias            = args.bias,
         green_fraction  = args.green_fraction,
         temperature     = args.temperature,
-        block_size      = args.block_size,
         hash_window     = args.hash_window
     )
     print(f"\nOutput saved to: {output_path}")

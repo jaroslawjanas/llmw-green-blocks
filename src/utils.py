@@ -5,7 +5,7 @@ Utility functions for LLM Watermarking.
 
 import os
 import random
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from datasets import load_dataset
 import src.paths as paths
 
@@ -61,7 +61,7 @@ def save_to_file(
         generated_text: str,
         stats: Dict,
         green_red_mask:List[int],
-        block_count: int,
+        block_counts: List[Tuple[int, int]], # Changed parameter
         output_file: str, 
         seed: int,
         model_name: str,
@@ -69,7 +69,6 @@ def save_to_file(
         bias: float,
         green_fraction: float,
         temperature: float,
-        block_size: int,
         hash_window: int = 1
     ):
 
@@ -80,6 +79,8 @@ def save_to_file(
         prompt: The input prompt
         generated_text: The generated text
         stats: Statistics about the watermarking
+        block_counts: A list of tuples, where each tuple contains (block_size, counted_blocks)
+                              for each block size considered.
         output_file: Path to the output file
         seed: Random seed used for generation
         model_name: Name of the model used for generation
@@ -91,10 +92,13 @@ def save_to_file(
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("=== INPUT PROMPT ===\n")
         f.write(prompt)
+
         f.write("\n\n=== GENERATED TEXT ===\n")
         f.write(generated_text)
+
         f.write("\n\n=== GREEN/RED MASK ===\n")
         f.write(str(green_red_mask))
+
         f.write("\n\n=== WATERMARK STATISTICS ===\n")
         f.write(f"Model: {model_name}\n")
         f.write(f"\n")
@@ -102,43 +106,50 @@ def save_to_file(
         f.write(f"Red tokens: {stats['red_tokens']}\n")
         f.write(f"Total tokens: {stats['total_tokens']}\n")
         f.write(f"Green ratio: {stats['green_ratio']:.4f}\n")
-        f.write(f"Block count: {block_count}\n")
         f.write(f"\n")
         f.write(f"Seed: {seed}\n")
         f.write(f"Context window: {context_window}\n")
         f.write(f"Bias: {bias}\n")
         f.write(f"Green fraction: {green_fraction}\n")
         f.write(f"Temperature: {temperature}\n")
-        f.write(f"Block size: {block_size}\n")
         f.write(f"Hash window: {hash_window}\n")
+        f.write(f"\n")
+        for b_size, b_count in block_counts: # Iterate and write
+            f.write(f"Block count (size {b_size}): {b_count}\n")
 
-def count_green_blocks(mask: List[int], block_size: int) -> int:
+def count_green_blocks(mask: List[int], block_sizes: List[int]) -> List[Tuple[int, int]]:
     """
-    Counts the number of intact green blocks (1s) in a mask (of 1s and 0s)
+    Counts the number of intact green blocks (1s) in a mask (of 1s and 0s) for multiple block sizes.
 
     Args:
         mask: A list of integers (0s and 1s) representing the green/red mask.
-        block_size: The required size of an intact block of 1s.
+        block_sizes: A list of required sizes for intact blocks of 1s.
 
     Returns:
-        The number of intact blocks of 1s found in the mask.
+        A list of tuples, where each tuple contains (block_size, counted_blocks) for each
+        block size provided in block_sizes.
     """
-    if not mask or block_size <= 0 or block_size > len(mask):
-        return 0
+    results = []
+    
+    for b_size in block_sizes:
+        if not mask or b_size <= 0 or b_size > len(mask):
+            results.append((b_size, 0))
+            continue
 
-    block_count = 0
-    green_in_row = 0
+        block_count = 0
+        green_in_row = 0
 
-    for color in mask:
-        if color == 1: # Green
-            green_in_row += 1
-        elif color == 0: # Red
-            green_in_row = 0
-        else:
-            raise ValueError("Mask must contain only 0s and 1s")
+        for color in mask:
+            if color == 1: # Green
+                green_in_row += 1
+            elif color == 0: # Red
+                green_in_row = 0
+            else:
+                raise ValueError("Mask must contain only 0s and 1s")
 
-        if green_in_row == block_size:
-            block_count += 1
-            green_in_row = 0 # Reset count after finding a block
+            if green_in_row == b_size:
+                block_count += 1
+                green_in_row = 0 # Reset count after finding a block
+        results.append((b_size, block_count))
 
-    return block_count
+    return results
