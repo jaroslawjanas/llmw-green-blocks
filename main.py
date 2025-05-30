@@ -115,7 +115,8 @@ def main():
     total_prompts = len(prompts)
 
     print(f"Generating {args.max_tokens} tokens per prompt with watermarking...")
-    print(f"Processing {total_prompts} prompt(s) with model: {args.model}\n")
+    print(f"Using dataset: {dataset_name}")
+    print(f"Processing {total_prompts} prompt(s) with model: {args.model}")
     print(f"Saving outputs to: {batch_output_dir}\n")
     
     output_paths = []
@@ -153,7 +154,8 @@ def main():
         print("---------------------\n")
         
         print("--- Watermark Statistics ---")
-        print(f"Model: {args.model}\n")
+        print(f"Model: {args.model}")
+        print(f"Dataset: {dataset_name}\n")
         print(f"Green tokens: {stats['green_tokens']}")
         print(f"Red tokens: {stats['red_tokens']}")
         print(f"Total tokens: {stats['total_tokens']}")
@@ -182,6 +184,7 @@ def main():
             file_path       = output_filepath,
             seed            = args.seed,
             model_name      = args.model,
+            dataset_name    = dataset_name,
             context_window  = args.context_window,
             bias            = args.bias,
             green_fraction  = args.green_fraction,
@@ -211,6 +214,7 @@ def main():
         average_block_counts=average_block_counts,
         batch_output_dir=batch_output_dir,
         model_name=args.model,
+        dataset_name=dataset_name,
         total_prompts=total_prompts,
         block_sizes_analyzed=args.block_size
     )
