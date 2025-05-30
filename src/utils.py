@@ -90,13 +90,13 @@ def get_shuffled_essays(seed: int, n_prompts: int) -> List[str]:
     
     return essays
 
-def save_to_file(
+def save_generation_details(
         prompt: str,
         generated_text: str,
         file_path: str,
         stats: Dict,
         green_red_mask:List[int],
-        block_counts: List[Tuple[int, int]], # Changed parameter
+        block_counts: List[Tuple[int, int]],
         seed: int,
         model_name: str,
         context_window: int,
@@ -188,3 +188,31 @@ def count_green_blocks(mask: List[int], block_sizes: List[int]) -> List[Tuple[in
         results.append((b_size, block_count))
 
     return results
+
+def save_average_block_counts(
+    average_block_counts: Dict[int, float],
+    batch_output_dir: str,
+    model_name: str,
+    total_prompts: int,
+    block_sizes_analyzed: List[int]
+):
+    """
+    Save the calculated average block counts for the entire batch to a separate file.
+
+    Args:
+        average_block_counts: A dictionary where keys are block_size and values are
+                              the average b_count for that size across the batch.
+        batch_output_dir: The directory where the batch output files are saved.
+        model_name: Name of the model used for generation.
+        total_prompts: Total number of prompts processed in the batch.
+        block_sizes_analyzed: List of block sizes that were analyzed.
+    """
+    average_output_filepath = os.path.join(batch_output_dir, "average_block_counts.txt")
+    with open(average_output_filepath, "w", encoding="utf-8") as f:
+        f.write("=== AVERAGE BLOCK COUNTS PER BLOCK SIZE (BATCH SUMMARY) ===\n")
+        f.write(f"Model: {model_name}\n")
+        f.write(f"Total Prompts Processed: {total_prompts}\n")
+        f.write(f"Block Sizes Analyzed: {block_sizes_analyzed}\n\n")
+        for b_size in sorted(average_block_counts.keys()):
+            f.write(f"Average Block Count (size {b_size}): {average_block_counts[b_size]:.2f}\n")
+    print(f"\nAverage block counts saved to: {average_output_filepath}")

@@ -2,9 +2,10 @@ import os
 import sys
 import datetime
 import argparse
+from collections import defaultdict
 from src.llm_watermark import LLMWatermarker
 from src.utils import get_shuffled_essays
-from src.utils import save_to_file, count_green_blocks, Tee
+from src.utils import save_generation_details, count_green_blocks, save_average_block_counts, Tee
 import src.paths as paths
 import src.model_selector
 
@@ -16,7 +17,7 @@ def main():
     parser.add_argument("--max-tokens", type=int, default=100, help="Maximum tokens to generate")
     parser.add_argument("--green-fraction", type=float, default=0.5, help="Fraction of tokens in green list")
     parser.add_argument("--bias", type=float, default=6.0, help="Bias to add to green tokens")
-    parser.add_argument("--seed", type=int, default=4242, help="Random seed")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--prompt", type=str, help="Custom prompt (uses random essay if not provided)")
     parser.add_argument("--cache-dir", type=str, default=paths.CACHE_DIR, help="Cache directory for models and datasets")
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
@@ -106,6 +107,10 @@ def main():
     
     output_paths = []
     
+    # Initialize defaultdict to aggregate block counts for averaging
+    # Keys will be block_size, values will be lists of b_count for that size
+    aggregated_block_counts = defaultdict(list)
+
     for prompt_idx, prompt in enumerate(prompts, 1):
         if total_prompts > 1:
             print(f"\n{'='*60}")
@@ -123,6 +128,10 @@ def main():
         # Find the number of intact blocks for each block size
         block_counts = count_green_blocks(green_red_mask, args.block_size)
         
+        # Aggregate block counts for batch averaging
+        for b_size, b_count in block_counts:
+            aggregated_block_counts[b_size].append(b_count)
+
         # Print results for this prompt
         print("\n--- Generated Text ---")
         print(generated_text)
@@ -151,7 +160,7 @@ def main():
         output_filepath = os.path.join(batch_output_dir, output_file)
 
         # Save output for this prompt
-        save_to_file(
+        save_generation_details(
             prompt          = prompt,
             generated_text  = generated_text,
             stats           = stats,
@@ -170,17 +179,42 @@ def main():
         output_paths.append(output_filepath)
         print(f"\nOutput saved to: {output_filepath}")
     
+    # Calculate average block counts for the entire batch
+    average_block_counts = {}
+    for b_size, counts in aggregated_block_counts.items():
+        average_block_counts[b_size] = sum(counts) / len(counts)
+
+    # Print average block counts to console
+    print("\n--- AVERAGE BLOCK COUNTS PER BLOCK SIZE (BATCH SUMMARY) ---")
+    print(f"Model: {args.model}")
+    print(f"Total Prompts Processed: {total_prompts}")
+    print(f"Block Sizes Analyzed: {args.block_size}\n")
+    for b_size in sorted(average_block_counts.keys()):
+        print(f"Average Block Count (size {b_size}): {average_block_counts[b_size]:.4f}")
+    print("-----------------------------------------------------------\n")
+
+    # Save average block counts to a separate file using the utility function
+    save_average_block_counts(
+        average_block_counts=average_block_counts,
+        batch_output_dir=batch_output_dir,
+        model_name=args.model,
+        total_prompts=total_prompts,
+        block_sizes_analyzed=args.block_size
+    )
+
+
     # Final summary
-    if total_prompts > 0: # Changed from total_prompts > 1 to handle single prompt case consistently
+    if total_prompts > 0:
         print(f"\n{'='*60}")
         print(f"BATCH PROCESSING COMPLETE")
         print(f"{'='*60}")
         print(f"Processed {total_prompts} prompt(s) successfully")
         print(f"Model: {args.model}")
-        print(f"Output directory: {batch_output_dir}") # Changed to show the directory
+        print(f"Output directory: {batch_output_dir}")
         print(f"Output files:")
         for i, output_path in enumerate(output_paths, 1):
-            print(f"  {i}. {os.path.basename(output_path)}") # Show only filename
+            print(f"  {i}. {os.path.basename(output_path)}")
+        print(f"  Batch average block counts: average_block_counts.txt") # Hardcode filename as it's fixed in the utility
         print(f"{'='*60}")
 
     # --- Restore original stdout and close log file ---
