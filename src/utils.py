@@ -4,10 +4,29 @@ Utility functions for LLM Watermarking.
 """
 
 import os
+import sys
 import random
 from typing import Dict, List, Tuple
 from datasets import load_dataset
 import src.paths as paths
+
+
+class Tee:
+    """
+    A class that writes to multiple file-like objects simultaneously.
+    Used to capture console output to both stdout and a log file.
+    """
+    def __init__(self, *files):
+        self.files = files
+
+    def write(self, text):
+        for file in self.files:
+            file.write(text)
+            file.flush()  # Ensure immediate writing
+
+    def flush(self):
+        for file in self.files:
+            file.flush()
 
 
 def load_hf_token():

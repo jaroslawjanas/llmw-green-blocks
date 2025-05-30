@@ -1,9 +1,10 @@
 import os
+import sys
 import datetime
 import argparse
 from src.llm_watermark import LLMWatermarker
 from src.utils import get_shuffled_essays
-from src.utils import save_to_file, count_green_blocks
+from src.utils import save_to_file, count_green_blocks, Tee
 import src.paths as paths
 import src.model_selector
 
@@ -57,6 +58,26 @@ def main():
         hash_window=args.hash_window
     )
     
+    model_name = args.model.split("/")[-1]
+    
+    # Create a timestamp for the entire batch
+    batch_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    batch_output_dir_name = f"{model_name}-{batch_timestamp}"
+    batch_output_dir = os.path.join(paths.OUTPUT_DIR, batch_output_dir_name)
+    
+    # Ensure the batch output directory exists
+    os.makedirs(batch_output_dir)
+
+    # --- Begin Tee logging setup ---
+    log_file_path = os.path.join(batch_output_dir, f"{batch_output_dir_name}.log")
+    original_stdout = sys.stdout
+    try:
+        log_file = open(log_file_path, "w", encoding="utf-8")
+        sys.stdout = Tee(original_stdout, log_file)
+    except Exception as e:
+        print(f"Failed to set up logging to file: {e}")
+    # --- End Tee logging setup ---
+
     # Get prompts
     if args.prompt:
         # Single custom prompt
@@ -78,15 +99,6 @@ def main():
     
     # Process each prompt
     total_prompts = len(prompts)
-    model_name = args.model.split("/")[-1]
-    
-    # Create a timestamp for the entire batch
-    batch_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    batch_output_dir_name = f"{model_name}-{batch_timestamp}"
-    batch_output_dir = os.path.join(paths.OUTPUT_DIR, batch_output_dir_name)
-    
-    # Ensure the batch output directory exists
-    os.makedirs(batch_output_dir)
 
     print(f"Generating {args.max_tokens} tokens per prompt with watermarking...")
     print(f"Processing {total_prompts} prompt(s) with model: {args.model}\n")
@@ -170,6 +182,14 @@ def main():
         for i, output_path in enumerate(output_paths, 1):
             print(f"  {i}. {os.path.basename(output_path)}") # Show only filename
         print(f"{'='*60}")
+
+    # --- Restore original stdout and close log file ---
+    try:
+        sys.stdout = original_stdout
+        if 'log_file' in locals():
+            log_file.close()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
