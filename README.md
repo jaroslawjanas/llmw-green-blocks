@@ -32,8 +32,8 @@ This technique increases the likelihood of selecting tokens from the green list,
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/jaroslawjanas/llmw-red-freq.git
-   cd llmw-red-freq
+   git clone https://github.com/jaroslawjanas/llmw-green-blocks.git
+   cd llmw-green-blocks
    ```
 
 2. Create and activate the conda environment:
@@ -54,7 +54,7 @@ This technique increases the likelihood of selecting tokens from the green list,
 
 ### Selecting a Model
 
-Use the model selector to choose an appropriate model for your hardware. Running it without arguments launches an interactive tool:
+Use the model selector to choose an appropriate model for your hardware. Note that if you specify a model using `--model` in `main.py`, it will be automatically downloaded if not already present.
 
 ```bash
 python main.py --model-selector
@@ -86,7 +86,7 @@ python main.py --model-selector --download organization/custom-model-name
 Basic usage:
 
 ```bash
-python llm_watermark.py
+python main.py
 ```
 
 This will:
@@ -98,7 +98,7 @@ This will:
 Advanced options:
 
 ```bash
-python llm_watermark.py --model facebook/opt-1.3b --max-tokens 200 --bias 8.0 --prompt "Your custom prompt here"
+python main.py --model facebook/opt-1.3b --max-tokens 200 --bias 8.0 --prompt "Your custom prompt here" --n-prompts 5
 ```
 
 All options:
@@ -112,14 +112,14 @@ All options:
 --prompt PROMPT         Custom prompt (uses random essay if not provided)
 --cache-dir CACHE_DIR   Cache directory for models (optional)
 --no-cuda               Disable CUDA even if available
---output OUTPUT         Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)
 --context-window CONTEXT_WINDOW   Maximum number of tokens to use as context for generation (default: 1500)
 --temperature, --temp TEMPERATURE Sampling temperature (default: 0.0 = greedy sampling, higher = more random)
 --hash-window HASH_WINDOW         Number of previous tokens to hash together (default: 1)
---block-size BLOCK_SIZE           Size of a green block to consider as intact (default: 25)
+--block-size BLOCK_SIZE           Size(s) of a green block to consider as intact (default: 25). Can be multiple values (e.g., --block-size 25 50)
+--n-prompts N_PROMPTS   Number of prompts to process (default: 1)
 ```
 
-Note: All watermarking results are automatically saved to the `output/` directory. If you don't specify a filename with `--output`, a filename will be automatically generated based on the model name and a timestamp (format: `modelname_gen_YYYYMMDD_HHMMSS.txt`). This ensures that multiple runs don't overwrite each other.
+Note: All watermarking results are automatically saved to the `output/` directory with an auto-generated filename based on the model name and a timestamp (format: `modelname_gen_YYYYMMDD_HHMMSS.txt`). This ensures that multiple runs don't overwrite each other.
 
 ## Examples
 
