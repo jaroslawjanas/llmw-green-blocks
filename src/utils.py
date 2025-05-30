@@ -121,7 +121,7 @@ def save_generation_details(
         block_counts: List[Tuple[int, int]],
         seed: int,
         model_name: str,
-        dataset_name: str, # Added dataset_name parameter
+        dataset_name: str,
         context_window: int,
         bias: float,
         green_fraction: float,
@@ -140,7 +140,7 @@ def save_generation_details(
                               for each block size considered.
         seed: Random seed used for generation
         model_name: Name of the model used for generation
-        dataset_name: Name of the dataset used for prompts # Added dataset_name to Args
+        dataset_name: Name of the dataset used for prompts
         context_window: Maximum context window size
         bias: Bias value added to green tokens
         green_fraction: Fraction of tokens in green list
@@ -160,7 +160,7 @@ def save_generation_details(
 
         f.write("\n\n=== WATERMARK STATISTICS ===\n")
         f.write(f"Model: {model_name}\n")
-        f.write(f"Dataset: {dataset_name}\n") # Added dataset_name to output
+        f.write(f"Dataset: {dataset_name}\n")
         f.write(f"\n")
         f.write(f"Green tokens: {stats['green_tokens']}\n")
         f.write(f"Red tokens: {stats['red_tokens']}\n")
@@ -218,7 +218,7 @@ def save_average_block_counts(
     average_block_counts: Dict[int, float],
     batch_output_dir: str,
     model_name: str,
-    dataset_name: str, # Added dataset_name parameter
+    dataset_name: str,
     total_prompts: int,
     block_sizes_analyzed: List[int]
 ):
@@ -230,7 +230,7 @@ def save_average_block_counts(
                               the average b_count for that size across the batch.
         batch_output_dir: The directory where the batch output files are saved.
         model_name: Name of the model used for generation.
-        dataset_name: Name of the dataset used for prompts. # Added dataset_name to Args
+        dataset_name: Name of the dataset used for prompts.
         total_prompts: Total number of prompts processed in the batch.
         block_sizes_analyzed: List of block sizes that were analyzed.
     """
