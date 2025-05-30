@@ -74,10 +74,10 @@ def get_shuffled_essays(seed: int, n_prompts: int) -> List[str]:
 def save_to_file(
         prompt: str,
         generated_text: str,
+        file_path: str,
         stats: Dict,
         green_red_mask:List[int],
         block_counts: List[Tuple[int, int]], # Changed parameter
-        output_file: str, 
         seed: int,
         model_name: str,
         context_window: int,
@@ -96,7 +96,6 @@ def save_to_file(
         stats: Statistics about the watermarking
         block_counts: A list of tuples, where each tuple contains (block_size, counted_blocks)
                               for each block size considered.
-        output_file: Path to the output file
         seed: Random seed used for generation
         model_name: Name of the model used for generation
         context_window: Maximum context window size
@@ -104,7 +103,9 @@ def save_to_file(
         green_fraction: Fraction of tokens in green list
         temperature: Sampling temperature used for generation
     """
-    with open(output_file, "w", encoding="utf-8") as f:
+    # Generate output filename
+
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write("=== INPUT PROMPT ===\n")
         f.write(prompt)
 

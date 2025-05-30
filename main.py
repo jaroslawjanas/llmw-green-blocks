@@ -19,7 +19,6 @@ def main():
     parser.add_argument("--prompt", type=str, help="Custom prompt (uses random essay if not provided)")
     parser.add_argument("--cache-dir", type=str, default=paths.CACHE_DIR, help="Cache directory for models and datasets")
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
-    parser.add_argument("--output", type=str, help="Custom filename for output in the output/ directory (if not specified, a filename will be auto-generated)")
     parser.add_argument("--context-window", type=int, default=1500, help="Maximum number of tokens to use as context for generation (default: 1500)")
     parser.add_argument("--temperature", "--temp", type=float, default=0.0, help="Sampling temperature (default: 0.0 = greedy sampling, higher = more random)")
     parser.add_argument("--hash-window", type=int, default=1, help="Number of previous tokens to hash together (default: 1)")
@@ -127,17 +126,12 @@ def main():
         print("---------------------------")
         
         # Generate output filename
-        if args.output and total_prompts == 1:
-            # Single prompt with custom output name
-            output_path = os.path.join(paths.OUTPUT_DIR, args.output)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        if total_prompts == 1:
+            output_file = f"{model_name}_gen_{timestamp}.txt"
         else:
-            # Generate filename with prompt index
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            if total_prompts == 1:
-                output_file = f"{model_name}_gen_{timestamp}.txt"
-            else:
-                output_file = f"{model_name}_prompt_{prompt_idx:03d}_gen_{timestamp}.txt"
-            output_path = os.path.join(paths.OUTPUT_DIR, output_file)
+            output_file = f"{model_name}_prompt_{prompt_idx:03d}_gen_{timestamp}.txt"
+        output_filepath = os.path.join(paths.OUTPUT_DIR, output_file)
 
         # Save output for this prompt
         save_to_file(
@@ -146,7 +140,7 @@ def main():
             stats           = stats,
             green_red_mask  = green_red_mask,
             block_counts    = block_counts,
-            output_file     = output_path,
+            file_path       = output_filepath,
             seed            = args.seed,
             model_name      = args.model,
             context_window  = args.context_window,
@@ -156,8 +150,8 @@ def main():
             hash_window     = args.hash_window
         )
         
-        output_paths.append(output_path)
-        print(f"\nOutput saved to: {output_path}")
+        output_paths.append(output_filepath)
+        print(f"\nOutput saved to: {output_filepath}")
     
     # Final summary
     if total_prompts > 1:
