@@ -18,7 +18,9 @@ def main():
     parser.add_argument("--green-fraction", type=float, default=0.5, help="Fraction of tokens in green list")
     parser.add_argument("--bias", type=float, default=6.0, help="Bias to add to green tokens")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    parser.add_argument("--prompt", type=str, help="Custom prompt (uses random essay if not provided)")
+    parser.add_argument("--prompt", type=str, help="Custom prompt (uses random essay from dataset if not provided)")
+    parser.add_argument("--dataset", type=str, nargs=4, default=["ChristophSchuhmann/essays-with-instructions", "default", "train", "instructions"], 
+                        help="Hugging Face dataset to use for prompts. Format: '<org>/<dataset name>' '<subset>' '<split>' '<column>'. Default: 'ChristophSchuhmann/essays-with-instructions' 'default' 'train' 'instructions'")
     parser.add_argument("--cache-dir", type=str, default=paths.CACHE_DIR, help="Cache directory for models and datasets")
     parser.add_argument("--no-cuda", action="store_true", help="Disable CUDA even if available")
     parser.add_argument("--context-window", type=int, default=1500, help="Maximum number of tokens to use as context for generation (default: 1500)")
@@ -88,13 +90,24 @@ def main():
         print("---------------------------\n")
     else:
         # Get shuffled essays from dataset
-        prompts = get_shuffled_essays(seed=args.seed, n_prompts=args.n_prompts)
+        dataset_name = args.dataset[0]
+        dataset_subset = args.dataset[1]
+        dataset_split = args.dataset[2]
+        dataset_column = args.dataset[3]
+        prompts = get_shuffled_essays(
+            dataset_name=dataset_name,
+            dataset_subset=dataset_subset,
+            dataset_split=dataset_split,
+            dataset_column=dataset_column,
+            seed=args.seed,
+            n_prompts=args.n_prompts
+        )
         if args.n_prompts == 1:
-            print("\n--- Random Essay Prompt ---")
+            print(f"\n--- Random Prompt from {dataset_name}/{dataset_subset} ({dataset_split} split, {dataset_column} column) ---")
             print(prompts[0][:200] + "..." if len(prompts[0]) > 200 else prompts[0])
             print("---------------------------\n")
         else:
-            print(f"\n--- Processing {args.n_prompts} Shuffled Essays ---")
+            print(f"\n--- Processing {args.n_prompts} Shuffled Prompts from {dataset_name}/{dataset_subset} ({dataset_split} split, {dataset_column} column) ---")
             print(f"First prompt preview: {prompts[0][:100] + '...' if len(prompts[0]) > 100 else prompts[0]}")
             print("---------------------------\n")
     

@@ -38,16 +38,27 @@ def load_hf_token():
             token = f.read().strip()
     return token
 
-def get_shuffled_essays(seed: int, n_prompts: int) -> List[str]:
+def get_shuffled_essays(
+    dataset_name: str,
+    dataset_subset: str,
+    dataset_split: str,
+    dataset_column: str,
+    seed: int,
+    n_prompts: int
+) -> List[str]:
     """
-    Get a shuffled list of essays from the dataset.
+    Get a shuffled list of prompts from a specified Hugging Face dataset, subset, split, and column.
     
     Args:
-        seed: Random seed for reproducibility
-        n_prompts: Number of prompts to return
+        dataset_name: The name of the Hugging Face dataset (e.g., "ChristophSchuhmann/essays-with-instructions").
+        dataset_subset: The name of the dataset subset (e.g., "default").
+        dataset_split: The name of the dataset split (e.g., "train", "validation", "test").
+        dataset_column: The name of the column in the dataset to extract prompts from (e.g., "text" or "instructions").
+        seed: Random seed for reproducibility.
+        n_prompts: Number of prompts to return.
         
     Returns:
-        List of essay texts (shuffled deterministically based on seed)
+        List of prompt texts (shuffled deterministically based on seed).
     """
     # Set random seed for reproducible shuffling
     random.seed(seed)
@@ -63,32 +74,43 @@ def get_shuffled_essays(seed: int, n_prompts: int) -> List[str]:
         dataset_kwargs["token"] = token
     
     # Load the dataset
-    dataset = load_dataset("ChristophSchuhmann/essays-with-instructions", **dataset_kwargs)
+    try:
+        dataset = load_dataset(dataset_name, dataset_subset, **dataset_kwargs)
+    except Exception as e:
+        raise ValueError(f"Failed to load dataset '{dataset_name}' with subset '{dataset_subset}': {e}")
     
-    # Get all essay indices
-    total_essays = len(dataset["train"])
+    if dataset_split not in dataset:
+        raise ValueError(f"Dataset '{dataset_name}' with subset '{dataset_subset}' does not have a '{dataset_split}' split. "
+                         f"Available splits: {list(dataset.keys())}")
+        
+    total_prompts_in_dataset = len(dataset[dataset_split])
     
-    # Check if we have enough essays
-    if n_prompts > total_essays:
-        raise ValueError(f"Requested {n_prompts} prompts but dataset only contains {total_essays} essays")
+    # Check if we have enough prompts
+    if n_prompts > total_prompts_in_dataset:
+        raise ValueError(f"Requested {n_prompts} prompts but dataset '{dataset_name}' "
+                         f"({dataset_subset} subset, {dataset_split} split) only contains {total_prompts_in_dataset} entries.")
     
     # Create a list of indices and shuffle them
-    essay_indices = list(range(total_essays))
-    random.shuffle(essay_indices)
+    prompt_indices = list(range(total_prompts_in_dataset))
+    random.shuffle(prompt_indices)
     
     # Get the first n_prompts indices
-    selected_indices = essay_indices[:n_prompts]
+    selected_indices = prompt_indices[:n_prompts]
     
-    # Extract the essays
-    essays = []
+    # Extract the prompts
+    prompts = []
     for idx in selected_indices:
-        essay_data = dataset["train"][idx]
-        essay_text = essay_data.get("instructions", "")
-        if not essay_text:
-            raise ValueError(f"No text found in dataset entry at index {idx}")
-        essays.append(essay_text)
+        prompt_data = dataset[dataset_split][idx]
+        try:
+            prompt_text = prompt_data[dataset_column]
+        except KeyError:
+            raise ValueError(f"Column '{dataset_column}' not found in dataset entry at index {idx} of split '{dataset_split}'. "
+                             f"Available columns: {list(prompt_data.keys())}")
+        if not prompt_text:
+            raise ValueError(f"No text found in dataset entry at index {idx} for column '{dataset_column}' in split '{dataset_split}'.")
+        prompts.append(prompt_text)
     
-    return essays
+    return prompts
 
 def save_generation_details(
         prompt: str,

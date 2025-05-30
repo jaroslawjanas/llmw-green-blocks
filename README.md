@@ -91,7 +91,7 @@ python main.py
 
 This will:
 1. Use the default model (or facebook/opt-125m if none set)
-2. Choose a random essay from the [essays-with-instructions](https://huggingface.co/datasets/ChristophSchuhmann/essags-with-instructions) dataset
+2. Choose a random prompt from the default dataset (`ChristophSchuhmann/essays-with-instructions` from the `instructions` column)
 3. Generate 100 tokens with watermarking
 4. Show statistics about green vs. red token selection, including a detailed timing summary
 
@@ -101,6 +101,13 @@ Advanced options:
 python main.py --model facebook/opt-1.3b --max-tokens 200 --bias 8.0 --prompt "Your custom prompt here" --n-prompts 5
 ```
 
+To specify a different dataset, subset, split, and column for prompts:
+
+```bash
+python main.py --dataset "HuggingFaceDatasetOrg/DatasetName" "subset_name" "split_name" "column_name" --n-prompts 10
+```
+Note: If a dataset does not have a specific subset, use "default" for the `subset_name` value.
+
 All options:
 
 ```
@@ -108,9 +115,10 @@ All options:
 --max-tokens MAX_TOKENS Maximum tokens to generate (default: 100)
 --green-fraction GREEN_FRACTION Fraction of tokens in green list (default: 0.5)
 --bias BIAS             Bias to add to green tokens (default: 6.0)
---seed SEED             Random seed for reproducibility (default: 4242)
---prompt PROMPT         Custom prompt (uses random essay if not provided)
---cache-dir CACHE_DIR   Cache directory for models (optional)
+--seed SEED             Random seed for reproducibility (default: 42)
+--prompt PROMPT         Custom prompt (uses random prompt from dataset if not provided)
+--dataset DATASET SUBSET SPLIT COLUMN   Hugging Face dataset to use for prompts, e.g., 'ChristophSchuhmann/essays-with-instructions' 'default' 'train' 'instructions' (default: ChristophSchuhmann/essays-with-instructions default train instructions)
+--cache-dir CACHE_DIR   Cache directory for models and datasets (optional)
 --no-cuda               Disable CUDA even if available
 --context-window CONTEXT_WINDOW   Maximum number of tokens to use as context for generation (default: 1500)
 --temperature, --temp TEMPERATURE Sampling temperature (default: 0.0 = greedy sampling, higher = more random)
