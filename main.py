@@ -80,8 +80,17 @@ def main():
     total_prompts = len(prompts)
     model_name = args.model.split("/")[-1]
     
+    # Create a timestamp for the entire batch
+    batch_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    batch_output_dir_name = f"{model_name}-{batch_timestamp}"
+    batch_output_dir = os.path.join(paths.OUTPUT_DIR, batch_output_dir_name)
+    
+    # Ensure the batch output directory exists
+    os.makedirs(batch_output_dir)
+
     print(f"Generating {args.max_tokens} tokens per prompt with watermarking...")
     print(f"Processing {total_prompts} prompt(s) with model: {args.model}\n")
+    print(f"Saving outputs to: {batch_output_dir}\n")
     
     output_paths = []
     
@@ -125,13 +134,9 @@ def main():
         print(f"Hash window: {args.hash_window}")
         print("---------------------------")
         
-        # Generate output filename
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        if total_prompts == 1:
-            output_file = f"{model_name}_gen_{timestamp}.txt"
-        else:
-            output_file = f"{model_name}_prompt_{prompt_idx:03d}_gen_{timestamp}.txt"
-        output_filepath = os.path.join(paths.OUTPUT_DIR, output_file)
+        # Generate output filename within the batch directory
+        output_file = f"prompt{prompt_idx:05d}.txt"
+        output_filepath = os.path.join(batch_output_dir, output_file)
 
         # Save output for this prompt
         save_to_file(
@@ -154,15 +159,16 @@ def main():
         print(f"\nOutput saved to: {output_filepath}")
     
     # Final summary
-    if total_prompts > 1:
+    if total_prompts > 0: # Changed from total_prompts > 1 to handle single prompt case consistently
         print(f"\n{'='*60}")
         print(f"BATCH PROCESSING COMPLETE")
         print(f"{'='*60}")
         print(f"Processed {total_prompts} prompt(s) successfully")
         print(f"Model: {args.model}")
+        print(f"Output directory: {batch_output_dir}") # Changed to show the directory
         print(f"Output files:")
         for i, output_path in enumerate(output_paths, 1):
-            print(f"  {i}. {output_path}")
+            print(f"  {i}. {os.path.basename(output_path)}") # Show only filename
         print(f"{'='*60}")
 
 
